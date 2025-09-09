@@ -12,23 +12,43 @@ import { type NewUser, type LoginUser } from '@/models/user.model.js';
 export async function register(user: NewUser) {
   const { full_name, email, password } = user;
 
-  // Check if user already exists
-  const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-  if (existingUser.rows.length > 0) {
-    throw new Error('Email already in use.');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Check if user already exists
+    const existingUser = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (existingUser.rows.length > 0) {
+      throw new Error('Email already in use.');
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    // Save user to database
+    const newUserResult = await client.query(
+      'INSERT INTO users (full_name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, full_name, email, created_at',
+      [full_name, email, passwordHash]
+    );
+
+    const newUser = newUserResult.rows[0];
+
+    // Create a default checking account for the new user
+    const accountNumber = Math.floor(100000 + Math.random() * 900000).toString();
+    await client.query(
+        'INSERT INTO accounts (user_id, account_number, account_type, balance) VALUES ($1, $2, $3, $4)',
+        [newUser.id, accountNumber, 'checking', 0]
+    );
+
+    await client.query('COMMIT');
+    return newUser;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-
-  // Hash password
-  const salt = await bcrypt.genSalt(10);
-  const passwordHash = await bcrypt.hash(password, salt);
-
-  // Save user to database
-  const newUserResult = await pool.query(
-    'INSERT INTO users (full_name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, full_name, email, created_at',
-    [full_name, email, passwordHash]
-  );
-
-  return newUserResult.rows[0];
 }
 
 /**
