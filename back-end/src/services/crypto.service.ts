@@ -3,13 +3,12 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const ALGORITHM = 'aes-256-gcm';
-const SECRET_KEY = Buffer.from(process.env.CRYPTO_SECRET_KEY!, 'hex');
-const IV = Buffer.from(process.env.CRYPTO_IV!, 'hex');
-
-if (!process.env.CRYPTO_SECRET_KEY || !process.env.CRYPTO_IV) {
-  throw new Error('CRYPTO_SECRET_KEY and CRYPTO_IV must be defined in environment variables');
+if (!process.env.CRYPTO_SECRET_KEY) {
+  throw new Error('CRYPTO_SECRET_KEY must be defined in environment variables. It should be a 32-byte hex string.');
 }
+
+const ALGORITHM = 'aes-256-gcm';
+const SECRET_KEY = Buffer.from(process.env.CRYPTO_SECRET_KEY, 'hex');
 
 /**
  * Encrypts a piece of text.
