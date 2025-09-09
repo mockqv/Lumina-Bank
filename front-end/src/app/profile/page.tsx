@@ -26,7 +26,7 @@ export default function ProfilePage() {
       {user ? (
         <Card>
           <CardHeader>
-            <CardTitle>{user.fullName}</CardTitle>
+            <CardTitle>{user.full_name}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p><strong>Email:</strong> {user.email}</p>

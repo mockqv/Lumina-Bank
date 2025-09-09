@@ -20,7 +20,7 @@ describe('Profile Page', () => {
     // Arrange
     const mockUser = {
       id: 'user-1',
-      fullName: 'John Doe',
+      full_name: 'John Doe',
       email: 'john.doe@example.com',
     };
     (useAuth as jest.Mock).mockReturnValue({

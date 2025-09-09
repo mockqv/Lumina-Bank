@@ -1,6 +1,6 @@
 // Interface for creating a new user
 export interface NewUser {
-  fullName: string;
+  full_name: string;
   email: string;
   password: string;
 }
@@ -14,7 +14,7 @@ export interface LoginUser {
 // Interface for a user object returned from the database
 export interface User {
   id: string; // uuid
-  fullName: string;
+  full_name: string;
   email: string;
-  createdAt: Date;
+  created_at: Date;
 }

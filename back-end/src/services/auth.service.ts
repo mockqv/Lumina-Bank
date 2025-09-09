@@ -10,7 +10,7 @@ import { type NewUser, type LoginUser } from '@/models/user.model.js';
  * @throws Will throw an error if the email is already in use.
  */
 export async function register(user: NewUser) {
-  const { fullName, email, password } = user;
+  const { full_name, email, password } = user;
 
   // Check if user already exists
   const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
@@ -25,7 +25,7 @@ export async function register(user: NewUser) {
   // Save user to database
   const newUserResult = await pool.query(
     'INSERT INTO users (full_name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, full_name, email, created_at',
-    [fullName, email, passwordHash]
+    [full_name, email, passwordHash]
   );
 
   return newUserResult.rows[0];

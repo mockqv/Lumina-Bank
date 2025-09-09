@@ -44,7 +44,7 @@ export default function DashboardPage() {
     <MainLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        {user && <span className="text-muted-foreground">Bem-vindo, {user.fullName}!</span>}
+        {user && <span className="text-muted-foreground">Bem-vindo, {user.full_name}!</span>}
       </div>
 
       <h2 className="text-2xl font-semibold mb-4">Suas Contas</h2>
