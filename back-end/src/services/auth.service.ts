@@ -55,6 +55,7 @@ export async function login(credentials: LoginUser) {
   const payload = {
     id: user.id,
     email: user.email,
+    full_name: user.full_name,
   };
 
   const jwtSecret = process.env.JWT_SECRET;
