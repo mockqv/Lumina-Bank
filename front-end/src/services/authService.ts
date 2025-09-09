@@ -10,6 +10,27 @@ export const loginSchema = z.object({
 
 export type LoginData = z.infer<typeof loginSchema>;
 
+export const registerSchema = z.object({
+    full_name: z.string().min(3, { message: "O nome completo é obrigatório." }),
+    email: z.string().email({ message: "Por favor, insira um email válido." }),
+    cpf: z.string().length(11, { message: "O CPF deve ter 11 dígitos." }),
+    password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
+});
+
+export type RegisterData = z.infer<typeof registerSchema>;
+
+export async function register(data: RegisterData) {
+    try {
+        const response = await api.post('/auth/register', data);
+        return response.data;
+    } catch (error) {
+        if (isAxiosError(error) && error.response) {
+            throw new Error(error.response.data.message || 'An error occurred during registration.');
+        }
+        throw new Error('An unexpected error occurred. Please check your connection.');
+    }
+}
+
 /**
  * Calls the backend API to log in a user.
  * @param credentials - The user's login credentials (email and password).

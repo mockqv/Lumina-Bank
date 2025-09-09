@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
 import pool from '@/config/database.js';
 import { type NewUser, type LoginUser } from '@/models/user.model.js';
+import { encrypt } from './crypto.service.js';
 
 /**
  * Registers a new user in the database.
@@ -10,7 +11,7 @@ import { type NewUser, type LoginUser } from '@/models/user.model.js';
  * @throws Will throw an error if the email is already in use.
  */
 export async function register(user: NewUser) {
-  const { full_name, email, password } = user;
+  const { full_name, email, password, cpf } = user;
 
   const client = await pool.connect();
   try {
@@ -22,23 +23,25 @@ export async function register(user: NewUser) {
       throw new Error('Email already in use.');
     }
 
-    // Hash password
+    // Hash password and encrypt CPF
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
+    const encryptedCpf = encrypt(cpf);
 
     // Save user to database
     const newUserResult = await client.query(
-      'INSERT INTO users (full_name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, full_name, email, created_at',
-      [full_name, email, passwordHash]
+      'INSERT INTO users (full_name, email, cpf, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, full_name, email, created_at',
+      [full_name, email, encryptedCpf, passwordHash]
     );
 
     const newUser = newUserResult.rows[0];
 
     // Create a default checking account for the new user
+    const agency = '0001'; // Default agency
     const accountNumber = Math.floor(100000 + Math.random() * 900000).toString();
     await client.query(
-        'INSERT INTO accounts (user_id, account_number, account_type, balance) VALUES ($1, $2, $3, $4)',
-        [newUser.id, accountNumber, 'checking', 0]
+        'INSERT INTO accounts (user_id, agency, account_number, account_type, balance) VALUES ($1, $2, $3, $4, $5)',
+        [newUser.id, agency, accountNumber, 'checking', 0]
     );
 
     await client.query('COMMIT');

@@ -3,6 +3,7 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     full_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
+    cpf VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -13,6 +14,7 @@ CREATE TYPE account_type AS ENUM ('checking', 'savings');
 CREATE TABLE accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
+    agency VARCHAR(10) NOT NULL,
     account_number VARCHAR(20) UNIQUE NOT NULL,
     account_type account_type NOT NULL,
     balance DECIMAL(15, 2) NOT NULL DEFAULT 0.00,

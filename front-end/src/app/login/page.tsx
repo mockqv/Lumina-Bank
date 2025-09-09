@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { login } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -64,6 +65,12 @@ export default function LoginPage() {
               Entrar
             </Button>
           </form>
+          <div className="mt-4 text-center text-sm">
+            Não tem uma conta?{' '}
+            <Link href="/register" className="underline">
+              Crie uma agora
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </main>
