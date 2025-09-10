@@ -22,7 +22,7 @@ export default function StatementPage() {
   const [filters, setFilters] = useState({
     startDate: new Date(new Date().setDate(1)).toISOString().split('T')[0], // First day of current month
     endDate: new Date().toISOString().split('T')[0], // Today
-    type: '' as 'credit' | 'debit' | '',
+    type: 'all' as 'credit' | 'debit' | 'all',
   });
 
   const fetchStatement = async () => {
@@ -33,7 +33,7 @@ export default function StatementPage() {
         accountId,
         filters.startDate,
         filters.endDate,
-        filters.type || undefined
+        filters.type === 'all' ? undefined : filters.type
       );
       setStatement(fetchedStatement);
     } catch (error) {
@@ -53,7 +53,7 @@ export default function StatementPage() {
   };
 
   const handleSelectFilterChange = (value: string) => {
-    setFilters(prev => ({ ...prev, type: value as 'credit' | 'debit' | ''}));
+    setFilters(prev => ({ ...prev, type: value as 'credit' | 'debit' | 'all'}));
   }
 
   const formatCurrency = (value: number) => {
@@ -90,7 +90,7 @@ export default function StatementPage() {
                       <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
-                      <SelectItem value="">Todos</SelectItem>
+                      <SelectItem value="all">Todos</SelectItem>
                       <SelectItem value="credit">Entrada</SelectItem>
                       <SelectItem value="debit">Saída</SelectItem>
                   </SelectContent>
