@@ -22,6 +22,16 @@ export function MainLayout({ children }: MainLayoutProps) {
                 Perfil
               </Link>
             </li>
+            <li>
+              <Link href="/transfer" className="block p-2 rounded-md hover:bg-muted">
+                Transferir
+              </Link>
+            </li>
+            <li>
+              <Link href="/pix" className="block p-2 rounded-md hover:bg-muted">
+                Chaves PIX
+              </Link>
+            </li>
           </ul>
         </nav>
       </aside>

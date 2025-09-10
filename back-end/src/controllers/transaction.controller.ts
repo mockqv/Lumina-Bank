@@ -57,3 +57,64 @@ export async function getTransactions(req: AuthRequest, res: Response) {
         }
     }
 }
+
+export async function getStatement(req: AuthRequest, res: Response) {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        const { accountId } = req.params;
+        const { startDate, endDate, type } = req.query;
+
+        if (!accountId || !startDate || !endDate) {
+            return res.status(400).json({ message: 'Missing required fields: accountId, startDate, endDate' });
+        }
+
+        const statement = await transactionService.getStatement({
+            accountId,
+            userId: req.user.id,
+            startDate: startDate as string,
+            endDate: endDate as string,
+            type: type as 'credit' | 'debit' | undefined,
+        });
+
+        res.status(200).json(statement);
+    } catch (error) {
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'An unexpected error occurred', details: error.message });
+        } else {
+            res.status(500).json({ message: 'An unexpected error occurred' });
+        }
+    }
+}
+
+export async function createPixTransfer(req: AuthRequest, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+
+    const { amount, pixKey, description } = req.body;
+
+    // Basic validation
+    if (!amount || !pixKey) {
+        return res.status(400).json({ message: 'Missing required fields: amount, pixKey' });
+    }
+
+    const newTransaction = await transactionService.createPixTransfer({
+      senderUserId: req.user.id,
+      amount: parseFloat(amount),
+      pixKey,
+      description,
+    });
+
+    res.status(201).json(newTransaction);
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({ message: 'An unexpected error occurred', details: error.message });
+    } else {
+      res.status(500).json({ message: 'An unexpected error occurred' });
+    }
+  }
+}
