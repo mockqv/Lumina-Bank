@@ -76,7 +76,7 @@ export async function getStatement(req: AuthRequest, res: Response) {
             userId: req.user.id,
             startDate: startDate as string,
             endDate: endDate as string,
-            type: type as 'credit' | 'debit' | undefined,
+            type: type as 'credit' | 'debit',
         });
 
         res.status(200).json(statement);

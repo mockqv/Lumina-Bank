@@ -192,29 +192,18 @@ export async function getStatement({ accountId, userId, startDate, endDate, type
                 date,
                 transactions: [],
                 initial_balance: runningBalance,
-                final_balance: 0 // will be calculated
+                final_balance: runningBalance
             };
         }
+
         dailyStatements[date].transactions.push(t);
+
         if (t.type === 'credit') {
             runningBalance += parseFloat(t.amount);
         } else {
             runningBalance -= parseFloat(t.amount);
         }
         dailyStatements[date].final_balance = runningBalance;
-    }
-
-    // Set final balance for days that have transactions
-    for (const date in dailyStatements) {
-        let dailyTotal = 0;
-        for(const t of dailyStatements[date].transactions) {
-            if(t.type === 'credit') {
-                dailyTotal += parseFloat(t.amount);
-            } else {
-                dailyTotal -= parseFloat(t.amount);
-            }
-        }
-        dailyStatements[date].final_balance = dailyStatements[date].initial_balance + dailyTotal;
     }
 
     return Object.values(dailyStatements);

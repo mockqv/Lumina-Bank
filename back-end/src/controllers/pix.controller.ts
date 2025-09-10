@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import * as pixService from '../services/pix.service';
-import { CreatePixKeySchema, UpdatePixKeyStatusSchema } from '../models/pix.model';
+import * as pixService from '../services/pix.service.js';
+import { CreatePixKeySchema, UpdatePixKeyStatusSchema } from '../models/pix.model.js';
 
 // Extend the Request type to include the user property
 declare global {

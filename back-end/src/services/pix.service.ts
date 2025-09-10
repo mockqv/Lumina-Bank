@@ -1,5 +1,5 @@
-import { pool } from '../config/database';
-import { PixKey, CreatePixKeyData, UpdatePixKeyStatusData } from '../models/pix.model';
+import { pool } from '../config/database.js';
+import { PixKey, CreatePixKeyData, UpdatePixKeyStatusData } from '../models/pix.model.js';
 import { randomUUID } from 'crypto';
 
 export const findPixKeyByValue = async (key_value: string): Promise<PixKey | null> => {

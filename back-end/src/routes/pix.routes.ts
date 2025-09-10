@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import * as pixController from '../controllers/pix.controller';
-import { protect } from '../middlewares/auth.middleware';
+import * as pixController from '../controllers/pix.controller.js';
+import { protect } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
