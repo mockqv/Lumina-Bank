@@ -15,12 +15,9 @@ jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(),
 }));
 
-jest.mock('@/components/main-layout', () => {
-  return {
-    __esModule: true,
-    default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  };
-});
+jest.mock('@/components/main-layout', () => ({
+  MainLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
 
 describe('Profile Page', () => {
   it('renders user information and a logout button', () => {

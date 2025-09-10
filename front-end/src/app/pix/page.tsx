@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import MainLayout from '@/components/main-layout';
+import { MainLayout } from '@/components/main-layout';
 import * as pixService from '@/services/pixService';
 import { useAuth } from '@/contexts/AuthContext';
 

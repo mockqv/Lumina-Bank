@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { logout } from '@/services/authService';
 import { updateUserSchema, type UpdateUserData, updateUser } from '@/services/userService';
-import MainLayout from '@/components/main-layout';
+import { MainLayout } from '@/components/main-layout';
 
 export default function ProfilePage() {
   const { user, checkUserStatus } = useAuth();
