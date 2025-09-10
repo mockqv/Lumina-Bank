@@ -71,13 +71,16 @@ export async function getStatement(req: AuthRequest, res: Response) {
             return res.status(400).json({ message: 'Missing required fields: accountId, startDate, endDate' });
         }
 
-        const statement = await transactionService.getStatement({
+        const args: any = {
             accountId,
             userId: req.user.id,
             startDate: startDate as string,
             endDate: endDate as string,
-            type: type as 'credit' | 'debit',
-        });
+        };
+        if (type) {
+            args.type = type as 'credit' | 'debit';
+        }
+        const statement = await transactionService.getStatement(args);
 
         res.status(200).json(statement);
     } catch (error) {

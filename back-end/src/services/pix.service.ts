@@ -1,4 +1,4 @@
-import { pool } from '../config/database.js';
+import pool from '../config/database.js';
 import { PixKey, CreatePixKeyData, UpdatePixKeyStatusData } from '../models/pix.model.js';
 import { randomUUID } from 'crypto';
 
@@ -30,14 +30,20 @@ export const createPixKey = async (user_id: string, data: CreatePixKeyData): Pro
     'INSERT INTO pix_keys (user_id, key_type, key_value) VALUES ($1, $2, $3) RETURNING *',
     [user_id, key_type, final_key_value]
   );
+  if (!result.rows[0]) {
+    throw new Error('Could not create PIX key.');
+  }
   return result.rows[0];
 };
 
-export const updatePixKeyStatus = async (key_id: string, user_id: string, data: UpdatePixKeyStatusData): Promise<PixKey | null> => {
+export const updatePixKeyStatus = async (key_id: string, user_id: string, data: UpdatePixKeyStatusData): Promise<PixKey> => {
   const { status } = data;
   const result = await pool.query<PixKey>(
     'UPDATE pix_keys SET status = $1 WHERE id = $2 AND user_id = $3 RETURNING *',
     [status, key_id, user_id]
   );
-  return result.rows[0] || null;
+  if (!result.rows[0]) {
+    throw new Error('Could not update PIX key status. Key not found or user not authorized.');
+  }
+  return result.rows[0];
 };

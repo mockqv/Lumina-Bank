@@ -39,6 +39,9 @@ export const updatePixKeyStatus = async (req: Request, res: Response) => {
   try {
     const user_id = req.user.id;
     const { key_id } = req.params;
+    if (!key_id) {
+      return res.status(400).json({ message: 'PIX key ID is required' });
+    }
     const data = UpdatePixKeyStatusSchema.parse(req.body);
     const updatedKey = await pixService.updatePixKeyStatus(key_id, user_id, data);
     if (updatedKey) {

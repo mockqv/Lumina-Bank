@@ -182,29 +182,34 @@ export async function getStatement({ accountId, userId, startDate, endDate, type
     const transactions = transactionsResult.rows;
 
     // Group transactions by day
-    const dailyStatements: { [key: string]: { date: string, transactions: any[], initial_balance: number, final_balance: number } } = {};
+    const dailyStatements = new Map<string, { date: string, transactions: any[], initial_balance: number, final_balance: number }>();
     let runningBalance = initialBalance;
 
     for (const t of transactions) {
-        const date = new Date(t.created_at).toISOString().split('T')[0];
-        if (!dailyStatements[date]) {
-            dailyStatements[date] = {
-                date,
-                transactions: [],
-                initial_balance: runningBalance,
-                final_balance: runningBalance
-            };
-        }
+        if(t.created_at) {
+            const date = new Date(t.created_at).toISOString().split('T')[0] as string;
 
-        dailyStatements[date].transactions.push(t);
+            if (!dailyStatements.has(date)) {
+                dailyStatements.set(date, {
+                    date,
+                    transactions: [],
+                    initial_balance: runningBalance,
+                    final_balance: runningBalance
+                });
+            }
 
-        if (t.type === 'credit') {
-            runningBalance += parseFloat(t.amount);
-        } else {
-            runningBalance -= parseFloat(t.amount);
+            const dayStatement = dailyStatements.get(date)!;
+
+            dayStatement.transactions.push(t);
+
+            if (t.type === 'credit') {
+                runningBalance += parseFloat(t.amount);
+            } else {
+                runningBalance -= parseFloat(t.amount);
+            }
+            dayStatement.final_balance = runningBalance;
         }
-        dailyStatements[date].final_balance = runningBalance;
     }
 
-    return Object.values(dailyStatements);
+    return Array.from(dailyStatements.values());
 }

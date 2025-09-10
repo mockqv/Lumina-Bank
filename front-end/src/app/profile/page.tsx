@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { logout } from '@/services/authService';
-import MainLayout from "@/components/main-layout";
 import { updateUserSchema, type UpdateUserData, updateUser } from '@/services/userService';
 import MainLayout from '@/components/main-layout';
 
