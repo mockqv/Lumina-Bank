@@ -60,6 +60,12 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="phone">Telefone (com DDD)</Label>
+              <Input id="phone" type="tel" {...register("phone")} />
+              {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
               <Input id="password" type="password" {...register("password")} />
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}

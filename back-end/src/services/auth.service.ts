@@ -11,7 +11,7 @@ import { encrypt } from './crypto.service.js';
  * @throws Will throw an error if the email is already in use.
  */
 export async function register(user: NewUser) {
-  const { full_name, email, password, cpf } = user;
+  const { full_name, email, password, cpf, phone } = user;
 
   const client = await pool.connect();
   try {
@@ -30,8 +30,8 @@ export async function register(user: NewUser) {
 
     // Save user to database
     const newUserResult = await client.query(
-      'INSERT INTO users (full_name, email, cpf, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, full_name, email, created_at',
-      [full_name, email, encryptedCpf, passwordHash]
+      'INSERT INTO users (full_name, email, cpf, phone, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, created_at',
+      [full_name, email, encryptedCpf, phone, passwordHash]
     );
 
     const newUser = newUserResult.rows[0];

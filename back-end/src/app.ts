@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import authRoutes from '@/routes/auth.routes.js';
 import accountRoutes from '@/routes/account.routes.js';
 import transactionRoutes from '@/routes/transaction.routes.js';
+import userRoutes from '@/routes/user.routes.js';
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/accounts', accountRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/users', userRoutes);
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Lumina Bank API is running!');

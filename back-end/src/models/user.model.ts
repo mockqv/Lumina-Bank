@@ -2,6 +2,8 @@
 export interface NewUser {
   full_name: string;
   email: string;
+  cpf: string;
+  phone: string;
   password: string;
 }
 
