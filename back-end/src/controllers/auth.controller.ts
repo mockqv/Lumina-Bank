@@ -16,6 +16,41 @@ export async function register(req: Request, res: Response) {
   }
 }
 
+export async function forgotPassword(req: Request, res: Response) {
+    const { email } = req.body;
+    if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+    }
+    try {
+        await authService.forgotPassword(email);
+        res.status(200).json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+    } catch (error) {
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'An unexpected error occurred', details: error.message });
+        } else {
+            res.status(500).json({ message: 'An unexpected error occurred' });
+        }
+    }
+}
+
+export async function resetPassword(req: Request, res: Response) {
+    const { token, password } = req.body;
+    if (!token || !password) {
+        return res.status(400).json({ message: 'Token and password are required' });
+    }
+    try {
+        await authService.resetPassword(token, password);
+        res.status(200).json({ message: 'Password has been reset successfully.' });
+    } catch (error) {
+        if (error instanceof Error) {
+            res.status(400).json({ message: error.message });
+        } else {
+            res.status(500).json({ message: 'An unexpected error occurred' });
+        }
+    }
+}
+
+
 export async function login(req: Request, res: Response) {
   try {
     const { token } = await authService.login(req.body);

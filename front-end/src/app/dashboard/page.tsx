@@ -1,60 +1,49 @@
 "use client"
 
-import { useState } from "react"
-import { Eye, EyeOff, Plus, ArrowUpRight, ArrowDownLeft } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Eye, EyeOff, Plus, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-
-// Mock data - replace with actual API calls
-const mockAccounts = [
-  {
-    id: "1",
-    account_type: "checking",
-    balance: "15420.50",
-    agency: "0001",
-    account_number: "12345-6",
-  },
-  {
-    id: "2",
-    account_type: "savings",
-    balance: "8750.25",
-    agency: "0001",
-    account_number: "54321-9",
-  },
-]
-
-const mockTransactions = [
-  {
-    id: "1",
-    description: "Transferência PIX recebida",
-    amount: "500.00",
-    type: "credit",
-    created_at: "2024-01-15T10:30:00Z",
-  },
-  {
-    id: "2",
-    description: "Pagamento cartão de crédito",
-    amount: "1200.00",
-    type: "debit",
-    created_at: "2024-01-14T14:20:00Z",
-  },
-  {
-    id: "3",
-    description: "Depósito em conta",
-    amount: "2500.00",
-    type: "credit",
-    created_at: "2024-01-13T09:15:00Z",
-  },
-]
+import { useAuth } from "@/contexts/AuthContext"
+import { getAccounts, type Account } from "@/services/accountService"
+import { getRecentTransactions, type Transaction } from "@/services/transactionService"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function DashboardPage() {
-  const [accounts, setAccounts] = useState(mockAccounts)
-  const [transactions, setTransactions] = useState(mockTransactions)
-  const [loading, setLoading] = useState(false)
+  const { user, loading: authLoading } = useAuth()
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
   const [isBalanceVisible, setIsBalanceVisible] = useState(false)
+
+  useEffect(() => {
+    if (user) {
+      const fetchData = async () => {
+        try {
+          setLoading(true)
+          const [accountsData, transactionsData] = await Promise.all([
+            getAccounts(),
+            getRecentTransactions(),
+          ])
+          setAccounts(accountsData)
+          setTransactions(transactionsData)
+        } catch (err) {
+          if (err instanceof Error) {
+            setError(err.message)
+          } else {
+            setError("An unexpected error occurred.")
+          }
+        } finally {
+          setLoading(false)
+        }
+      }
+      fetchData()
+    }
+  }, [user])
 
   const totalBalance = accounts.reduce((acc, account) => acc + Number.parseFloat(account.balance), 0)
 
@@ -73,9 +62,25 @@ export default function DashboardPage() {
     })
   }
 
-  // Mock user data
-  const user = {
-    full_name: "João Silva",
+  if (authLoading || loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </MainLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <MainLayout>
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </MainLayout>
+    )
   }
 
   return (
@@ -84,7 +89,7 @@ export default function DashboardPage() {
         {/* Welcome Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-balance">Olá, {user.full_name}!</h1>
+            <h1 className="text-3xl font-bold text-balance">Olá, {user?.full_name}!</h1>
             <p className="text-muted-foreground">Bem-vindo de volta ao seu banco digital</p>
           </div>
           <div className="flex items-center space-x-2">
@@ -138,6 +143,12 @@ export default function DashboardPage() {
                   Gerenciar PIX
                 </Button>
               </Link>
+              <Link href="/receive" className="block">
+                <Button className="w-full justify-start bg-transparent" variant="outline">
+                  <ArrowDownLeft className="mr-2 h-4 w-4" />
+                  Receber Dinheiro
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
@@ -185,7 +196,7 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-semibold">Transações Recentes</h2>
-            <Link href="/statement" className="text-sm text-primary hover:underline font-medium">
+            <Link href={`/statement/${accounts[0]?.id}`} className="text-sm text-primary hover:underline font-medium">
               Ver todas
             </Link>
           </div>

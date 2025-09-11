@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -16,36 +16,43 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Home, CreditCard, Send, Receipt, Settings, LogOut, Menu, Bell, User, HelpCircle } from "lucide-react"
+import { Home, CreditCard, Send, Receipt, Settings, LogOut, Menu, Bell, User, HelpCircle, Loader2 } from "lucide-react"
+import { useAuth } from "@/contexts/AuthContext"
+import { getAccounts, type Account } from "@/services/accountService"
+import { useEffect } from "react"
+import { ThemeToggle } from "./theme-toggle"
 
 interface MainLayoutProps {
   children: React.ReactNode
 }
 
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "Transferências", href: "/transfer", icon: Send },
-  { name: "PIX", href: "/pix", icon: CreditCard },
-  { name: "Extratos", href: "/statement", icon: Receipt },
-  { name: "Configurações", href: "/settings", icon: Settings },
-]
-
 export function MainLayout({ children }: MainLayoutProps) {
   const pathname = usePathname()
-  const router = useRouter()
+  const { user, logout, loading } = useAuth()
+  const [accounts, setAccounts] = useState<Account[]>([])
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  // Mock user data - replace with actual auth context
-  const user = {
-    name: "João Silva",
-    email: "joao@email.com",
-    initials: "JS",
+  useEffect(() => {
+    if (user) {
+      getAccounts().then(setAccounts)
+    }
+  }, [user])
+
+  const handleLogout = async () => {
+    await logout()
   }
 
-  const handleLogout = () => {
-    // Add logout logic here
-    router.push("/login")
+  const getInitials = (name: string) => {
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase()
   }
+
+  const navigation = [
+    { name: "Dashboard", href: "/dashboard", icon: Home },
+    { name: "Transferências", href: "/transfer", icon: Send },
+    { name: "PIX", href: "/pix", icon: CreditCard },
+    { name: "Extratos", href: `/statement/${accounts[0]?.id}`, icon: Receipt, disabled: accounts.length === 0 },
+    { name: "Configurações", href: "/settings", icon: Settings },
+  ]
 
   const SidebarContent = ({ onItemClick }: { onItemClick?: () => void }) => (
     <>
@@ -61,22 +68,26 @@ export function MainLayout({ children }: MainLayoutProps) {
       <div className="mb-6 p-3 bg-muted/50 rounded-lg">
         <div className="flex items-center space-x-3 mb-3">
           <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-primary text-primary-foreground">{user.initials}</AvatarFallback>
+            <AvatarFallback className="bg-primary text-primary-foreground">{user ? getInitials(user.full_name) : ""}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{user.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+            <p className="text-sm font-medium truncate">{user?.full_name}</p>
+            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="ghost" size="sm" className="justify-start h-8 px-2">
-            <User className="mr-1 h-3 w-3" />
-            <span className="text-xs">Perfil</span>
+          <Button asChild variant="ghost" size="sm" className="justify-start h-8 px-2">
+            <Link href="/profile">
+              <User className="mr-1 h-3 w-3" />
+              <span className="text-xs">Perfil</span>
+            </Link>
           </Button>
-          <Button variant="ghost" size="sm" className="justify-start h-8 px-2">
-            <Settings className="mr-1 h-3 w-3" />
-            <span className="text-xs">Config</span>
+          <Button asChild variant="ghost" size="sm" className="justify-start h-8 px-2">
+            <Link href="/settings">
+              <Settings className="mr-1 h-3 w-3" />
+              <span className="text-xs">Config</span>
+            </Link>
           </Button>
           <Button variant="ghost" size="sm" className="justify-start h-8 px-2">
             <HelpCircle className="mr-1 h-3 w-3" />
@@ -100,12 +111,12 @@ export function MainLayout({ children }: MainLayoutProps) {
           return (
             <Link
               key={item.name}
-              href={item.href}
+              href={item.disabled ? "#" : item.href}
               className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
                 isActive
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
+              } ${item.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
               onClick={onItemClick}
             >
               <item.icon className="h-5 w-5" />
@@ -116,6 +127,14 @@ export function MainLayout({ children }: MainLayoutProps) {
       </nav>
     </>
   )
+
+  if (loading) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -156,6 +175,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
               {/* Header Actions */}
               <div className="flex items-center space-x-4">
+                <ThemeToggle />
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
                   <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full"></span>
@@ -165,10 +185,10 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <div className="hidden md:flex items-center space-x-2 text-sm">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                      {user.initials}
+                      {user ? getInitials(user.full_name) : ""}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="font-medium">{user.name}</span>
+                  <span className="font-medium">{user?.full_name}</span>
                 </div>
 
                 {/* Mobile user dropdown */}
@@ -176,25 +196,29 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <DropdownMenuTrigger asChild className="md:hidden">
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                       <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-primary text-primary-foreground">{user.initials}</AvatarFallback>
+                        <AvatarFallback className="bg-primary text-primary-foreground">{user ? getInitials(user.full_name) : ""}</AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.name}</p>
-                        <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                        <p className="text-sm font-medium leading-none">{user?.full_name}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Perfil</span>
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Perfil</span>
+                      </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Configurações</span>
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Configurações</span>
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
                       <HelpCircle className="mr-2 h-4 w-4" />

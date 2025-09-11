@@ -64,3 +64,43 @@ export async function logout() {
         // as the main goal is to clear the user state.
     }
 }
+
+export const forgotPasswordSchema = z.object({
+    email: z.string().email({ message: "Por favor, insira um email válido." }),
+});
+
+export type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>;
+
+export async function forgotPassword(email: string) {
+    try {
+        const response = await api.post('/auth/forgot-password', { email });
+        return response.data;
+    } catch (error) {
+        if (isAxiosError(error) && error.response) {
+            throw new Error(error.response.data.message || 'An error occurred.');
+        }
+        throw new Error('An unexpected error occurred. Please check your connection.');
+    }
+}
+
+export const resetPasswordSchema = z.object({
+    password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
+    confirmPassword: z.string(),
+}).refine(data => data.password === data.confirmPassword, {
+    message: "As senhas não correspondem.",
+    path: ["confirmPassword"],
+});
+
+export type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
+
+export async function resetPassword(data: ResetPasswordData & { token: string }) {
+    try {
+        const response = await api.post('/auth/reset-password', data);
+        return response.data;
+    } catch (error) {
+        if (isAxiosError(error) && error.response) {
+            throw new Error(error.response.data.message || 'An error occurred.');
+        }
+        throw new Error('An unexpected error occurred. Please check your connection.');
+    }
+}

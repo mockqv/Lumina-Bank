@@ -104,3 +104,74 @@ export async function login(credentials: LoginUser) {
 
   return { token };
 }
+
+export async function forgotPassword(email: string) {
+  const client = await pool.connect();
+  try {
+    const userResult = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (userResult.rows.length === 0) {
+      // To prevent email enumeration, we don't throw an error here.
+      // The user will see the same message whether the email exists or not.
+      return;
+    }
+    const user = userResult.rows[0];
+
+    const resetToken = (await import('crypto')).randomBytes(32).toString('hex');
+    const passwordResetToken = (await import('crypto'))
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    const passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    await client.query(
+      'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+      [user.id, passwordResetToken, passwordResetExpires]
+    );
+
+    // In a real application, you would send an email here.
+    // For this example, we'll log the token to the console.
+    console.log(`Password reset token for ${email}: ${resetToken}`);
+    // The reset URL would be something like:
+    // http://localhost:3000/reset-password?token=${resetToken}
+
+  } finally {
+    client.release();
+  }
+}
+
+export async function resetPassword(token: string, password: string) {
+  const hashedToken = (await import('crypto'))
+    .createHash('sha256')
+    .update(token)
+    .digest('hex');
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const tokenResult = await client.query(
+      'SELECT * FROM password_reset_tokens WHERE token = $1 AND expires_at > NOW()',
+      [hashedToken]
+    );
+
+    if (tokenResult.rows.length === 0) {
+      throw new Error('Token is invalid or has expired.');
+    }
+
+    const userId = tokenResult.rows[0].user_id;
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    await client.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, userId]);
+    await client.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [userId]); // Invalidate all tokens for the user
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}

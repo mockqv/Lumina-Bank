@@ -5,14 +5,21 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('token');
   const { pathname } = request.nextUrl;
 
-  // Se o usuário está tentando acessar o dashboard sem um token, redirecione para o login
-  if (pathname.startsWith('/dashboard') && !token) {
+  const protectedRoutes = ['/dashboard', '/statement', '/pix', '/transfer', '/profile', '/receive'];
+  const publicOnlyRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
+
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+  const isPublicOnlyRoute = publicOnlyRoutes.includes(pathname);
+
+  // If trying to access a protected route without a token, redirect to login
+  if (isProtectedRoute && !token) {
     const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('next', pathname); // Pass the original path for redirection after login
     return NextResponse.redirect(loginUrl);
   }
 
-  // Se o usuário está logado e tenta acessar a página de login, redirecione para o dashboard
-  if (pathname === '/login' && token) {
+  // If logged in and trying to access a public-only route, redirect to dashboard
+  if (isPublicOnlyRoute && token) {
     const dashboardUrl = new URL('/dashboard', request.url);
     return NextResponse.redirect(dashboardUrl);
   }
@@ -20,7 +27,15 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// See "Matching Paths" below to learn more
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
 };

@@ -36,6 +36,22 @@ export async function createTransaction(req: AuthRequest, res: Response) {
   }
 }
 
+export async function getRecentTransactions(req: AuthRequest, res: Response) {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+        const transactions = await transactionService.getRecentTransactionsByUserId(req.user.id);
+        res.status(200).json(transactions);
+    } catch (error) {
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'An unexpected error occurred', details: error.message });
+        } else {
+            res.status(500).json({ message: 'An unexpected error occurred' });
+        }
+    }
+}
+
 export async function getTransactions(req: AuthRequest, res: Response) {
     try {
         if (!req.user) {
@@ -98,7 +114,7 @@ export async function createPixTransfer(req: AuthRequest, res: Response) {
       return res.status(401).json({ message: 'Not authorized' });
     }
 
-    const { amount, pixKey, description } = req.body;
+    const { amount, pixKey, description, transferKey } = req.body;
 
     // Basic validation
     if (!amount || !pixKey) {
@@ -110,6 +126,7 @@ export async function createPixTransfer(req: AuthRequest, res: Response) {
       amount: parseFloat(amount),
       pixKey,
       description,
+      transferKey,
     });
 
     res.status(201).json(newTransaction);

@@ -30,7 +30,7 @@ export const updatePixKeyStatus = async (key_id: string, status: 'active' | 'ina
   return response.data;
 };
 
-export const createPixTransfer = async (data: { amount: number, pixKey: string, description: string }): Promise<any> => {
-    const response = await api.post('/transactions/pix', data);
+export const getPrimaryPixKeyByUserId = async (userId: string): Promise<PixKey> => {
+    const response = await api.get(`/pix/user/${userId}/primary`);
     return response.data;
 }

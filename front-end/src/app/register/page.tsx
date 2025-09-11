@@ -12,11 +12,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Shield, ArrowLeft, CheckCircle } from "lucide-react"
-import { registerSchema, type RegisterData, formatCPF, formatCNPJ } from "@/lib/validation"
+import { registerSchema, type RegisterData } from "@/services/authService"
 import { useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { register: registerUser } = useAuth()
   const [error, setError] = useState("")
 
   const {
@@ -34,13 +36,14 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterData) => {
     try {
       setError("")
-      // Simulate registration API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      // Mock success - replace with actual registration service
-      router.push("/login?message=Conta criada com sucesso! Faça login para continuar.")
+      await registerUser(data)
+      router.push("/dashboard")
     } catch (error) {
-      setError("Erro ao criar conta. Tente novamente.")
+      if (error instanceof Error) {
+        setError(error.message)
+      } else {
+        setError("An unexpected error occurred.")
+      }
     }
   }
 
