@@ -1,98 +1,191 @@
-"use client";
+"use client"
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { registerSchema, type RegisterData, register as registerUser } from '@/services/authService';
+import type React from "react"
+
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Loader2, Shield, ArrowLeft, CheckCircle } from "lucide-react"
+import { registerSchema, type RegisterData, formatCPF, formatCNPJ } from "@/lib/validation"
+import { useState } from "react"
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue } = useForm<RegisterData>({
+  const router = useRouter()
+  const [error, setError] = useState("")
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setValue,
+    watch,
+  } = useForm<RegisterData>({
     resolver: zodResolver(registerSchema),
-  });
+  })
+
+  const cpfValue = watch("cpf")
 
   const onSubmit = async (data: RegisterData) => {
     try {
-      await registerUser(data);
-      // Redirect to login page after successful registration
-      router.push('/login');
+      setError("")
+      // Simulate registration API call
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      // Mock success - replace with actual registration service
+      router.push("/login?message=Conta criada com sucesso! Faça login para continuar.")
     } catch (error) {
-      // You can use a toast notification here for better UX
-      if (error instanceof Error) {
-        alert(error.message);
-      } else {
-        alert('An unknown error occurred.');
-      }
+      setError("Erro ao criar conta. Tente novamente.")
     }
-  };
+  }
+
+  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, "")
+    setValue("cpf", value, { shouldValidate: true })
+  }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, "")
+    setValue("phone", value, { shouldValidate: true })
+  }
 
   return (
-    <main className="flex items-center justify-center min-h-screen bg-secondary">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">Crie sua Conta</CardTitle>
-          <CardDescription className="text-center">Junte-se ao Lumina Bank hoje mesmo.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-card/30 to-muted/20 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Back to home link */}
+        <div className="mb-6">
+          <Link
+            href="/"
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar ao início
+          </Link>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Nome Completo</Label>
-              <Input id="full_name" {...register("full_name")} />
-              {errors.full_name && <p className="text-sm text-destructive">{errors.full_name.message}</p>}
+        <Card className="border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-xl">
+          <CardHeader className="text-center pb-6">
+            <div className="flex items-center justify-center space-x-2 mb-4">
+              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-xl">L</span>
+              </div>
+              <span className="text-2xl font-bold text-primary">Lumina Bank</span>
+            </div>
+            <CardTitle className="text-2xl font-bold">Crie sua conta</CardTitle>
+            <CardDescription>Junte-se ao Lumina Bank e tenha acesso a serviços bancários modernos</CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="full_name">Nome Completo</Label>
+                <Input
+                  id="full_name"
+                  placeholder="Digite seu nome completo"
+                  {...register("full_name")}
+                  className="h-11"
+                />
+                {errors.full_name && <p className="text-sm text-destructive">{errors.full_name.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} className="h-11" />
+                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cpf">CPF/CNPJ</Label>
+                <Input
+                  id="cpf"
+                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                  {...register("cpf", {
+                    onChange: handleCPFChange,
+                  })}
+                  value={cpfValue ? (cpfValue.length <= 11 ? formatCPF(cpfValue) : formatCNPJ(cpfValue)) : ""}
+                  maxLength={18}
+                  className="h-11"
+                />
+                {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefone</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="(11) 99999-9999"
+                  {...register("phone", {
+                    onChange: handlePhoneChange,
+                  })}
+                  className="h-11"
+                />
+                {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Mínimo 8 caracteres"
+                  {...register("password")}
+                  className="h-11"
+                />
+                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="h-3 w-3" />
+                    <span>Pelo menos 8 caracteres</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="h-3 w-3" />
+                    <span>Uma letra maiúscula e minúscula</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="h-3 w-3" />
+                    <span>Pelo menos um número</span>
+                  </div>
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full h-11" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Criando conta...
+                  </>
+                ) : (
+                  "Criar Conta"
+                )}
+              </Button>
+            </form>
+
+            <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
+              <Shield className="h-4 w-4" />
+              <span>Seus dados estão protegidos</span>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" {...register("email")} />
-              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+            <div className="text-center text-sm text-muted-foreground">
+              Já tem uma conta?{" "}
+              <Link href="/login" className="text-primary hover:underline font-medium">
+                Faça login
+              </Link>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="cpf">CPF/CNPJ (apenas números)</Label>
-              <Input
-                id="cpf"
-                {...register("cpf", {
-                  onChange: (e) => {
-                    const value = e.target.value.replace(/\D/g, '');
-                    setValue("cpf", value, { shouldValidate: true });
-                  }
-                })}
-                maxLength={14}
-              />
-              {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefone (com DDD)</Label>
-              <Input id="phone" type="tel" {...register("phone")} />
-              {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" {...register("password")} />
-              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-            </div>
-
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Criando conta...' : 'Criar Conta'}
-            </Button>
-          </form>
-
-          <div className="mt-4 text-center text-sm">
-            Já tem uma conta?{' '}
-            <Link href="/login" className="underline">
-              Faça login
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-    </main>
-  );
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
 }
