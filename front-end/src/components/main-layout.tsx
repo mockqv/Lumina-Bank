@@ -20,6 +20,7 @@ import { Home, CreditCard, Send, Receipt, Settings, LogOut, Menu, Bell, User, He
 import { useAuth } from "@/contexts/AuthContext"
 import { getAccounts, type Account } from "@/services/accountService"
 import { useEffect } from "react"
+import { ThemeToggle } from "./theme-toggle"
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -171,8 +172,6 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <span className="text-xl font-bold text-primary">Lumina Bank</span>
                 </Link>
               </div>
-
-import { ThemeToggle } from "./theme-toggle"
 
               {/* Header Actions */}
               <div className="flex items-center space-x-4">
