@@ -6,6 +6,7 @@ const router = Router();
 
 router.use(protect);
 
+router.get('/recent', transactionController.getRecentTransactions);
 router.post('/', transactionController.createTransaction);
 router.get('/:accountId/statement', transactionController.getStatement);
 router.post('/pix', transactionController.createPixTransfer);

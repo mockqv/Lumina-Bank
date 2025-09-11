@@ -53,3 +53,20 @@ export const updatePixKeyStatus = async (req: Request, res: Response) => {
     res.status(400).json({ message: 'Error updating PIX key status', error });
   }
 };
+
+export const getPrimaryPixKeyByUserId = async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.params;
+        if (!userId) {
+            return res.status(400).json({ message: 'User ID is required' });
+        }
+        const key = await pixService.getPrimaryPixKeyByUserId(userId);
+        if (key) {
+            res.status(200).json(key);
+        } else {
+            res.status(404).json({ message: 'No active PIX key found for this user' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching primary PIX key', error });
+    }
+}

@@ -13,67 +13,8 @@ import { Badge } from "@/components/ui/badge"
 import { MainLayout } from "@/components/main-layout"
 import { Calendar, Download, Filter, ArrowUpRight, ArrowDownLeft, Receipt, Loader2 } from "lucide-react"
 
-// Mock data types
-interface Transaction {
-  id: string
-  description: string
-  amount: string
-  type: "credit" | "debit"
-  created_at: string
-}
-
-interface DailyStatement {
-  date: string
-  initial_balance: number
-  final_balance: number
-  transactions: Transaction[]
-}
-
-// Mock data
-const mockStatement: DailyStatement[] = [
-  {
-    date: "2024-01-15",
-    initial_balance: 15420.5,
-    final_balance: 15920.5,
-    transactions: [
-      {
-        id: "1",
-        description: "Transferência PIX recebida - João Silva",
-        amount: "500.00",
-        type: "credit",
-        created_at: "2024-01-15T10:30:00Z",
-      },
-    ],
-  },
-  {
-    date: "2024-01-14",
-    initial_balance: 16620.5,
-    final_balance: 15420.5,
-    transactions: [
-      {
-        id: "2",
-        description: "Pagamento cartão de crédito",
-        amount: "1200.00",
-        type: "debit",
-        created_at: "2024-01-14T14:20:00Z",
-      },
-    ],
-  },
-  {
-    date: "2024-01-13",
-    initial_balance: 14120.5,
-    final_balance: 16620.5,
-    transactions: [
-      {
-        id: "3",
-        description: "Depósito em conta",
-        amount: "2500.00",
-        type: "credit",
-        created_at: "2024-01-13T09:15:00Z",
-      },
-    ],
-  },
-]
+import { getStatement, type DailyStatement } from "@/services/transactionService"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function StatementPage() {
   const params = useParams()
@@ -81,6 +22,7 @@ export default function StatementPage() {
 
   const [statement, setStatement] = useState<DailyStatement[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState("")
   const [filters, setFilters] = useState({
     startDate: new Date(new Date().setDate(1)).toISOString().split("T")[0], // First day of current month
     endDate: new Date().toISOString().split("T")[0], // Today
@@ -88,13 +30,23 @@ export default function StatementPage() {
   })
 
   const fetchStatement = async () => {
+    if (!accountId) return
     try {
       setIsLoading(true)
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      setStatement(mockStatement)
-    } catch (error) {
-      console.error("Failed to fetch statement")
+      setError("")
+      const fetchedStatement = await getStatement(
+        accountId,
+        filters.startDate,
+        filters.endDate,
+        filters.type === "all" ? undefined : filters.type,
+      )
+      setStatement(fetchedStatement)
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("An unexpected error occurred.")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -155,6 +107,17 @@ export default function StatementPage() {
         total +
         daily.transactions.filter((t) => t.type === "debit").reduce((sum, t) => sum + Number.parseFloat(t.amount), 0),
       0,
+    )
+  }
+
+  if (error) {
+    return (
+      <MainLayout>
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </MainLayout>
     )
   }
 

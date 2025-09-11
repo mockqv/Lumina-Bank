@@ -11,7 +11,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MainLayout } from "@/components/main-layout"
 import { Loader2, Send, Shield, CheckCircle, AlertCircle } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
+import { getTransferKey } from "@/services/transferKeyService"
+import { getPrimaryPixKeyByUserId } from "@/services/pixService"
+import { createPixTransfer } from "@/services/transactionService"
 import { formatCPF, formatCNPJ } from "@/lib/validation"
 
 const pixTransferSchema = z.object({
@@ -25,11 +29,16 @@ const pixTransferSchema = z.object({
 
 type PixTransferData = z.infer<typeof pixTransferSchema>
 
-export default function TransferPage() {
+function TransferComponent() {
+  const searchParams = useSearchParams()
+  const transferKey = searchParams.get("key")
+
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [step, setStep] = useState<"form" | "confirm" | "success">("form")
   const [transferData, setTransferData] = useState<PixTransferData | null>(null)
+  const [keyDetails, setKeyDetails] = useState<any>(null)
+  const [loadingKey, setLoadingKey] = useState(true)
 
   const {
     register,
@@ -37,9 +46,41 @@ export default function TransferPage() {
     formState: { errors, isSubmitting },
     reset,
     watch,
+    setValue,
   } = useForm<PixTransferData>({
     resolver: zodResolver(pixTransferSchema),
   })
+
+  useEffect(() => {
+    const fetchKeyDetails = async () => {
+      if (transferKey) {
+        try {
+          setLoadingKey(true)
+          const details = await getTransferKey(transferKey)
+          if (details.is_used) {
+            setError("Esta chave de transferência já foi utilizada.")
+            return
+          }
+          const pixKey = await getPrimaryPixKeyByUserId(details.recipient_id)
+          setKeyDetails({ ...details, recipient_pix_key: pixKey.key_value })
+          setValue("amount", Number(details.amount))
+          setValue("pixKey", pixKey.key_value)
+        } catch (err) {
+          if (err instanceof Error) {
+            setError(err.message)
+          } else {
+            setError("An unexpected error occurred while fetching key details.")
+          }
+        } finally {
+          setLoadingKey(false)
+        }
+      } else {
+        setLoadingKey(false)
+      }
+    }
+    fetchKeyDetails()
+  }, [transferKey, setValue])
+
 
   const watchedAmount = watch("amount")
 
@@ -67,21 +108,25 @@ export default function TransferPage() {
   }
 
   const confirmTransfer = async () => {
-    if (!transferData) return
+    if (!transferData) return;
 
     try {
-      setError("")
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      // Mock success
-      setStep("success")
-      setSuccess("Transferência realizada com sucesso!")
-    } catch (error) {
-      setError("Erro na transferência. Tente novamente.")
-      setStep("form")
+      setError("");
+      await createPixTransfer({
+        ...transferData,
+        transferKey: transferKey || undefined,
+      });
+      setStep("success");
+      setSuccess("Transferência realizada com sucesso!");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unexpected error occurred during the transfer.");
+      }
+      setStep("form");
     }
-  }
+  };
 
   const startNewTransfer = () => {
     setStep("form")
@@ -89,6 +134,16 @@ export default function TransferPage() {
     setSuccess("")
     setError("")
     reset()
+  }
+
+  if (loadingKey) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </MainLayout>
+    )
   }
 
   if (step === "success") {
@@ -161,6 +216,12 @@ export default function TransferPage() {
                   <span className="text-muted-foreground">Chave PIX do destinatário:</span>
                   <span className="font-medium">{formatPixKey(transferData?.pixKey || "")}</span>
                 </div>
+                {keyDetails && (
+                    <div className="flex justify-between items-center py-3 border-b">
+                        <span className="text-muted-foreground">Nome do destinatário:</span>
+                        <span className="font-medium">{keyDetails.recipient_name}</span>
+                    </div>
+                )}
                 <div className="flex justify-between items-center py-3 border-b">
                   <span className="text-muted-foreground">Valor:</span>
                   <span className="font-bold text-2xl text-primary">{formatCurrency(transferData?.amount || 0)}</span>
@@ -235,11 +296,16 @@ export default function TransferPage() {
                   placeholder="CPF, CNPJ, email, telefone ou chave aleatória"
                   {...register("pixKey")}
                   className="h-11"
+                  disabled={!!transferKey}
                 />
                 {errors.pixKey && <p className="text-sm text-destructive">{errors.pixKey.message}</p>}
-                <p className="text-xs text-muted-foreground">
-                  Digite a chave PIX do destinatário. Pode ser CPF, CNPJ, email, telefone ou chave aleatória.
-                </p>
+                {keyDetails ? (
+                    <p className="text-xs text-muted-foreground">Destinatário: {keyDetails.recipient_name}</p>
+                ) : (
+                    <p className="text-xs text-muted-foreground">
+                    Digite a chave PIX do destinatário. Pode ser CPF, CNPJ, email, telefone ou chave aleatória.
+                    </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -255,6 +321,7 @@ export default function TransferPage() {
                     placeholder="0,00"
                     {...register("amount")}
                     className="h-11 pl-10"
+                    disabled={!!transferKey}
                   />
                 </div>
                 {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
@@ -283,7 +350,7 @@ export default function TransferPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full h-11" disabled={isSubmitting}>
+              <Button type="submit" className="w-full h-11" disabled={isSubmitting || !!transferKey}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -302,4 +369,18 @@ export default function TransferPage() {
       </div>
     </MainLayout>
   )
+}
+
+export default function TransferPage() {
+    return (
+        <Suspense fallback={
+            <MainLayout>
+                <div className="flex items-center justify-center h-full">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+            </MainLayout>
+        }>
+            <TransferComponent />
+        </Suspense>
+    )
 }

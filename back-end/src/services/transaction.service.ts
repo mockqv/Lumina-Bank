@@ -72,10 +72,16 @@ export async function getTransactionsByAccountId(accountId: string, userId: stri
     return result.rows;
 }
 
-export async function createPixTransfer({ senderUserId, amount, pixKey, description }: { senderUserId: string; amount: number; pixKey: string; description: string; }) {
+import { markTransferKeyAsUsed } from './transferKey.service.js';
+
+export async function createPixTransfer({ senderUserId, amount, pixKey, description, transferKey }: { senderUserId: string; amount: number; pixKey: string; description: string; transferKey?: string }) {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
+
+        if (transferKey) {
+            await markTransferKeyAsUsed(transferKey);
+        }
 
         // 1. Find recipient's PIX key
         const recipientPixKey = await findPixKeyByValue(pixKey);
@@ -212,4 +218,17 @@ export async function getStatement({ accountId, userId, startDate, endDate, type
     }
 
     return Array.from(dailyStatements.values());
+}
+
+export async function getRecentTransactionsByUserId(userId: string, limit: number = 5) {
+    const result = await pool.query(
+        `SELECT t.*
+         FROM transactions t
+         JOIN accounts a ON t.account_id = a.id
+         WHERE a.user_id = $1
+         ORDER BY t.created_at DESC
+         LIMIT $2`,
+        [userId, limit]
+    );
+    return result.rows;
 }

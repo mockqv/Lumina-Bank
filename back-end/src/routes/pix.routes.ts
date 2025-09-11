@@ -8,6 +8,7 @@ router.use(protect);
 
 router.get('/', pixController.getPixKeys);
 router.post('/', pixController.createPixKey);
+router.get('/user/:userId/primary', pixController.getPrimaryPixKeyByUserId);
 router.patch('/:key_id/status', pixController.updatePixKeyStatus);
 
 export default router;

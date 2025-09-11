@@ -83,3 +83,35 @@ CREATE TABLE pix_keys (
 -- Índice para melhorar a performance das consultas de chaves PIX
 CREATE INDEX idx_pix_keys_user_id ON pix_keys(user_id);
 CREATE INDEX idx_pix_keys_key_value ON pix_keys(key_value);
+
+-- Tabela para Tokens de Redefinição de Senha
+CREATE TABLE password_reset_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_user_password_reset
+        FOREIGN KEY(user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_password_reset_tokens_token ON password_reset_tokens(token);
+
+-- Tabela para Chaves de Transferência (Receber Dinheiro)
+CREATE TABLE transfer_keys (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    key VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_used BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_user_transfer_key
+        FOREIGN KEY(user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_transfer_keys_key ON transfer_keys(key);

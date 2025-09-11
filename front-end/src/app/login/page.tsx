@@ -10,11 +10,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Shield, ArrowLeft } from "lucide-react"
-import { loginSchema, type LoginData } from "@/lib/validation"
+import { loginSchema, type LoginData } from "@/services/authService"
 import { useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login } = useAuth()
   const [error, setError] = useState("")
 
   const {
@@ -28,17 +30,14 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginData) => {
     try {
       setError("")
-      // Simulate login API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Mock login logic - replace with actual auth service
-      if (data.email === "admin@lumina.com" && data.password === "password") {
-        router.push("/dashboard")
-      } else {
-        setError("Email ou senha incorretos")
-      }
+      await login(data)
+      router.push("/dashboard")
     } catch (error) {
-      setError("Erro interno do servidor. Tente novamente.")
+      if (error instanceof Error) {
+        setError(error.message)
+      } else {
+        setError("An unexpected error occurred.")
+      }
     }
   }
 
@@ -112,7 +111,7 @@ export default function LoginPage() {
             </div>
 
             <div className="text-center space-y-2">
-              <Link href="#" className="text-sm text-primary hover:underline">
+              <Link href="/forgot-password" className="text-sm text-primary hover:underline">
                 Esqueceu sua senha?
               </Link>
               <div className="text-sm text-muted-foreground">

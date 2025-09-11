@@ -32,3 +32,13 @@ export const getStatement = async (accountId: string, startDate: string, endDate
     const response = await api.get(`/transactions/${accountId}/statement`, { params });
     return response.data;
 }
+
+export const getRecentTransactions = async (): Promise<Transaction[]> => {
+    const response = await api.get('/transactions/recent');
+    return response.data;
+}
+
+export const createPixTransfer = async (data: { amount: number, pixKey: string, description?: string, transferKey?: string }): Promise<any> => {
+    const response = await api.post('/transactions/pix', data);
+    return response.data;
+}
