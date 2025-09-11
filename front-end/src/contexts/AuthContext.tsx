@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import api from '@/services/api';
 import { type LoginData, type RegisterData } from '@/services/authService';
 import * as authService from '@/services/authService';
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const checkUserStatus = async () => {
     setLoading(true);
@@ -60,8 +62,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    await authService.logout();
-    setUser(null);
+    setLoading(true);
+    try {
+      await authService.logout();
+      setUser(null);
+      router.push('/login');
+    } catch (error) {
+      console.error("Logout failed", error);
+      // Even if logout fails, redirect to login
+      setUser(null);
+      router.push('/login');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
