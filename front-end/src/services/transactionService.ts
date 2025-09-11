@@ -21,10 +21,25 @@ export interface DailyStatement {
     final_balance: number;
 }
 
-export const getStatement = async (accountId: string, startDate: string, endDate: string, type?: 'credit' | 'debit'): Promise<DailyStatement[]> => {
+export interface StatementResponse {
+    statement: DailyStatement[];
+    totalPages: number;
+    currentPage: number;
+}
+
+export const getStatement = async (
+    accountId: string,
+    startDate: string,
+    endDate: string,
+    type?: 'credit' | 'debit',
+    page: number = 1,
+    limit: number = 10
+): Promise<StatementResponse> => {
     const params = new URLSearchParams({
         startDate,
         endDate,
+        page: page.toString(),
+        limit: limit.toString(),
     });
     if (type) {
         params.append('type', type);

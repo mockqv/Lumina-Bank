@@ -81,7 +81,7 @@ export async function getStatement(req: AuthRequest, res: Response) {
         }
 
         const { accountId } = req.params;
-        const { startDate, endDate, type } = req.query;
+        const { startDate, endDate, type, page, limit } = req.query;
 
         if (!accountId || !startDate || !endDate) {
             return res.status(400).json({ message: 'Missing required fields: accountId, startDate, endDate' });
@@ -92,6 +92,8 @@ export async function getStatement(req: AuthRequest, res: Response) {
             userId: req.user.id,
             startDate: startDate as string,
             endDate: endDate as string,
+            page: page ? parseInt(page as string, 10) : 1,
+            limit: limit ? parseInt(limit as string, 10) : 10,
         };
         if (type) {
             args.type = type as 'credit' | 'debit';

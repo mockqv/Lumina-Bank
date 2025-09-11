@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -14,7 +14,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { MainLayout } from "@/components/main-layout"
 import { Plus, Key, Smartphone, Mail, CreditCard, Shuffle, Loader2, CheckCircle, Copy } from "lucide-react"
+import { getPixKeys, createPixKey, updatePixKeyStatus, deletePixKey, type PixKey } from "@/services/pixService"
+import { createTransferKey } from "@/services/transferKeyService"
 import { validateCPF } from "@/lib/validation"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { QrCode } from "lucide-react"
 
 const createPixKeySchema = z.object({
   key_type: z.enum(["cpf", "email", "phone", "random"], {
@@ -25,37 +29,20 @@ const createPixKeySchema = z.object({
 
 type CreatePixKeyData = z.infer<typeof createPixKeySchema>
 
-// Mock data
-const mockKeys = [
-  {
-    id: "1",
-    key_type: "cpf",
-    key_value: "123.456.789-00",
-    status: "active",
-    created_at: "2024-01-10T10:00:00Z",
-  },
-  {
-    id: "2",
-    key_type: "email",
-    key_value: "joao@email.com",
-    status: "active",
-    created_at: "2024-01-05T15:30:00Z",
-  },
-  {
-    id: "3",
-    key_type: "random",
-    key_value: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    status: "inactive",
-    created_at: "2024-01-01T09:15:00Z",
-  },
-]
+const createChargeSchema = z.object({
+  amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero."),
+  expires_in: z.string().default("1d"),
+})
+
+type CreateChargeData = z.infer<typeof createChargeSchema>
 
 export default function PixPage() {
-  const [keys, setKeys] = useState(mockKeys)
+  const [keys, setKeys] = useState<PixKey[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
+  const [generatedKey, setGeneratedKey] = useState<{ key: string } | null>(null)
   const {
     register,
     handleSubmit,
@@ -67,8 +54,33 @@ export default function PixPage() {
     resolver: zodResolver(createPixKeySchema),
   })
 
+  const {
+    register: registerCharge,
+    handleSubmit: handleSubmitCharge,
+    reset: resetCharge,
+    formState: { errors: errorsCharge, isSubmitting: isSubmittingCharge },
+  } = useForm<CreateChargeData>({
+    resolver: zodResolver(createChargeSchema),
+  })
+
   const keyType = watch("key_type")
   const keyValue = watch("key_value")
+
+  const fetchKeys = async () => {
+    try {
+      setIsLoading(true)
+      const fetchedKeys = await getPixKeys()
+      setKeys(fetchedKeys)
+    } catch (error) {
+      setError("Erro ao carregar chaves PIX.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchKeys()
+  }, [])
 
   const getKeyTypeIcon = (type: string) => {
     switch (type) {
@@ -124,43 +136,54 @@ export default function PixPage() {
       setError("")
       setSuccess("")
 
-      // Validate key value
       if (data.key_type !== "random" && !validateKeyValue(data.key_type, data.key_value || "")) {
         setError("Valor da chave inválido para o tipo selecionado")
         return
       }
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      // Mock success
-      const newKey = {
-        id: Date.now().toString(),
-        key_type: data.key_type,
-        key_value: data.key_type === "random" ? "a1b2c3d4-e5f6-7890-abcd-ef1234567890" : data.key_value || "",
-        status: "active" as const,
-        created_at: new Date().toISOString(),
-      }
-
-      setKeys([...keys, newKey])
+      await createPixKey(data)
       setSuccess("Chave PIX criada com sucesso!")
       reset()
+      fetchKeys()
     } catch (error) {
       setError("Erro ao criar chave PIX. Tente novamente.")
     }
   }
 
-  const handleStatusChange = async (keyId: string) => {
+  const handleStatusChange = async (keyId: string, currentStatus: "active" | "inactive") => {
     try {
       setError("")
-      const updatedKeys = keys.map((key) =>
-        key.id === keyId
-          ? { ...key, status: key.status === "active" ? ("inactive" as const) : ("active" as const) }
-          : key,
-      )
-      setKeys(updatedKeys)
+      const newStatus = currentStatus === "active" ? "inactive" : "active"
+      await updatePixKeyStatus(keyId, newStatus)
+      fetchKeys()
     } catch (error) {
       setError("Erro ao atualizar status da chave.")
+    }
+  }
+
+  const handleDeleteKey = async (keyId: string) => {
+    if (window.confirm("Tem certeza que deseja deletar esta chave PIX?")) {
+      try {
+        setError("")
+        await deletePixKey(keyId)
+        fetchKeys()
+        setSuccess("Chave PIX deletada com sucesso!")
+      } catch (error) {
+        setError("Erro ao deletar a chave PIX.")
+      }
+    }
+  }
+
+  const handleCreateCharge = async (data: CreateChargeData) => {
+    try {
+      setError("")
+      setSuccess("")
+      const newKey = await createTransferKey(data)
+      setGeneratedKey(newKey)
+      setSuccess("Cobrança gerada com sucesso!")
+      resetCharge()
+    } catch (error) {
+      setError("Erro ao gerar cobrança.")
     }
   }
 
@@ -193,6 +216,7 @@ export default function PixPage() {
         )}
 
         {/* Create New Key */}
+        <div className="grid md:grid-cols-2 gap-8">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -285,6 +309,66 @@ export default function PixPage() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <QrCode className="h-5 w-5" />
+              <span>Gerar Cobrança</span>
+            </CardTitle>
+            <CardDescription>Crie um QR Code para receber um valor específico.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmitCharge(handleCreateCharge)} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="amount">Valor da Cobrança</Label>
+                <Input id="amount" type="number" step="0.01" {...registerCharge("amount")} className="h-11" />
+                {errorsCharge.amount && <p className="text-sm text-destructive">{errorsCharge.amount.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label>Tempo de Expiração</Label>
+                <Select onValueChange={(value) => setValue("expires_in", value as any)} defaultValue="1d">
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="Selecione a expiração" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15m">15 minutos</SelectItem>
+                    <SelectItem value="30m">30 minutos</SelectItem>
+                    <SelectItem value="1h">1 hora</SelectItem>
+                    <SelectItem value="1d">1 dia</SelectItem>
+                    <SelectItem value="7d">7 dias</SelectItem>
+                    <SelectItem value="30d">30 dias</SelectItem>
+                    <SelectItem value="permanent">Permanente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" disabled={isSubmittingCharge} className="w-full h-11">
+                {isSubmittingCharge ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <QrCode className="mr-2 h-4 w-4" />
+                    Gerar Cobrança
+                  </>
+                )}
+              </Button>
+            </form>
+            {generatedKey && (
+              <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm font-medium">QR Code gerado!</p>
+                <p className="text-xs text-muted-foreground">Chave: {generatedKey.key}</p>
+                <Button variant="outline" size="sm" className="mt-2" onClick={() => copyToClipboard(generatedKey.key)}>
+                  <Copy className="mr-2 h-3 w-3" />
+                  Copiar Chave
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        </div>
+
         {/* Existing Keys */}
         <Card>
           <CardHeader>
@@ -340,11 +424,20 @@ export default function PixPage() {
                         </p>
                       </div>
                     </div>
-                    <Switch
-                      checked={key.status === "active"}
-                      onCheckedChange={() => handleStatusChange(key.id)}
-                      aria-label={`Toggle ${key.key_type} key status`}
-                    />
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={key.status === "active"}
+                        onCheckedChange={() => handleStatusChange(key.id, key.status)}
+                        aria-label={`Toggle ${key.key_type} key status`}
+                      />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteKey(key.id)}
+                      >
+                        Deletar
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>

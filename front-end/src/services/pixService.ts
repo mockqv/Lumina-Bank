@@ -34,3 +34,7 @@ export const getPrimaryPixKeyByUserId = async (userId: string): Promise<PixKey> 
     const response = await api.get(`/pix/user/${userId}/primary`);
     return response.data;
 }
+
+export const deletePixKey = async (key_id: string): Promise<void> => {
+  await api.delete(`/pix/${key_id}`);
+};

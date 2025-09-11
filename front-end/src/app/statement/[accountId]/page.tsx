@@ -21,6 +21,8 @@ export default function StatementPage() {
   const accountId = params.accountId as string
 
   const [statement, setStatement] = useState<DailyStatement[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const [filters, setFilters] = useState({
@@ -29,18 +31,21 @@ export default function StatementPage() {
     type: "all" as "credit" | "debit" | "all",
   })
 
-  const fetchStatement = async () => {
+  const fetchStatement = async (page = 1) => {
     if (!accountId) return
     try {
       setIsLoading(true)
       setError("")
-      const fetchedStatement = await getStatement(
+      const { statement: fetchedStatement, totalPages: fetchedTotalPages } = await getStatement(
         accountId,
         filters.startDate,
         filters.endDate,
         filters.type === "all" ? undefined : filters.type,
+        page
       )
       setStatement(fetchedStatement)
+      setTotalPages(fetchedTotalPages)
+      setCurrentPage(page)
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message)
@@ -53,8 +58,8 @@ export default function StatementPage() {
   }
 
   useEffect(() => {
-    fetchStatement()
-  }, [accountId, filters])
+    fetchStatement(currentPage)
+  }, [accountId, filters, currentPage])
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -240,77 +245,92 @@ export default function StatementPage() {
           <Card>
             <CardContent className="text-center py-12">
               <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Nenhuma transação encontrada para o período selecionado</p>
+              <p className="text-muted-foreground">Sem extratos recentes</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
-            {statement.map((daily) => (
-              <Card key={daily.date}>
-                <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <CardTitle className="text-lg">{formatDate(daily.date)}</CardTitle>
-                    <div className="flex items-center space-x-4 text-sm">
-                      <div className="text-center">
-                        <p className="text-muted-foreground">Saldo Inicial</p>
-                        <p className="font-semibold">{formatCurrency(daily.initial_balance)}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-muted-foreground">Saldo Final</p>
-                        <p className="font-semibold">{formatCurrency(daily.final_balance)}</p>
+          <>
+            <div className="space-y-6">
+              {statement.map((daily) => (
+                <Card key={daily.date}>
+                  <CardHeader className="pb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <CardTitle className="text-lg">{formatDate(daily.date)}</CardTitle>
+                      <div className="flex items-center space-x-4 text-sm">
+                        <div className="text-center">
+                          <p className="text-muted-foreground">Saldo Inicial do dia</p>
+                          <p className="font-semibold">{formatCurrency(daily.initial_balance)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-muted-foreground">Saldo Final do dia</p>
+                          <p className="font-semibold">{formatCurrency(daily.final_balance)}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-3">
-                    {daily.transactions.map((transaction) => (
-                      <div
-                        key={transaction.id}
-                        className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-center space-x-4">
-                          <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              transaction.type === "credit" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
-                            }`}
-                          >
-                            {transaction.type === "credit" ? (
-                              <ArrowDownLeft className="h-5 w-5" />
-                            ) : (
-                              <ArrowUpRight className="h-5 w-5" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium">{transaction.description}</p>
-                            <div className="flex items-center space-x-2">
-                              <p className="text-sm text-muted-foreground">{formatTime(transaction.created_at)}</p>
-                              <Badge
-                                variant={transaction.type === "credit" ? "default" : "secondary"}
-                                className="text-xs"
-                              >
-                                {transaction.type === "credit" ? "Entrada" : "Saída"}
-                              </Badge>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="space-y-3">
+                      {daily.transactions.map((transaction) => (
+                        <div
+                          key={transaction.id}
+                          className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center space-x-4">
+                            <div
+                              className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                transaction.type === "credit" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                              }`}
+                            >
+                              {transaction.type === "credit" ? (
+                                <ArrowDownLeft className="h-5 w-5" />
+                              ) : (
+                                <ArrowUpRight className="h-5 w-5" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium">{transaction.description}</p>
+                              <div className="flex items-center space-x-2">
+                                <p className="text-sm text-muted-foreground">{formatTime(transaction.created_at)}</p>
+                                <Badge
+                                  variant={transaction.type === "credit" ? "default" : "secondary"}
+                                  className="text-xs"
+                                >
+                                  {transaction.type === "credit" ? "Entrada" : "Saída"}
+                                </Badge>
+                              </div>
                             </div>
                           </div>
+                          <div className="text-right">
+                            <p
+                              className={`font-bold text-lg ${
+                                transaction.type === "credit" ? "text-green-600" : "text-red-600"
+                              }`}
+                            >
+                              {transaction.type === "credit" ? "+" : "-"}
+                              {formatCurrency(Number.parseFloat(transaction.amount))}
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p
-                            className={`font-bold text-lg ${
-                              transaction.type === "credit" ? "text-green-600" : "text-red-600"
-                            }`}
-                          >
-                            {transaction.type === "credit" ? "+" : "-"}
-                            {formatCurrency(Number.parseFloat(transaction.amount))}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center space-x-4 pt-4">
+                <Button onClick={() => fetchStatement(currentPage - 1)} disabled={currentPage === 1}>
+                  Anterior
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <Button onClick={() => fetchStatement(currentPage + 1)} disabled={currentPage === totalPages}>
+                  Próxima
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </MainLayout>

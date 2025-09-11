@@ -1,9 +1,13 @@
+import dotenv from 'dotenv';
+dotenv.config({ path: './.env.test' });
+
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 export default {
   preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@/(.*)\\.js$': '<rootDir>/src/$1.ts',
+    '^(\\.\\.?/.*)\\.js$': '$1',
   },
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {

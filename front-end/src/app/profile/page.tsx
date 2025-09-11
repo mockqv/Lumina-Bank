@@ -20,7 +20,7 @@ export default function ProfilePage() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, dirtyFields },
     reset,
   } = useForm<UpdateUserData>({
     resolver: zodResolver(updateUserSchema),
@@ -48,14 +48,26 @@ export default function ProfilePage() {
 
   const onSubmit = async (data: UpdateUserData) => {
     try {
-      await updateUser(data)
-      await checkUserStatus() // Refresh user data in context
-      alert("Perfil atualizado com sucesso!")
+      const dirtyData: Partial<UpdateUserData> = {};
+      if (dirtyFields.full_name) {
+        dirtyData.full_name = data.full_name;
+      }
+      if (dirtyFields.phone) {
+        dirtyData.phone = data.phone;
+      }
+
+      if (Object.keys(dirtyData).length === 0) {
+        return;
+      }
+
+      await updateUser(dirtyData);
+      await checkUserStatus(); // Refresh user data in context
+      alert("Perfil atualizado com sucesso!");
     } catch (error) {
       if (error instanceof Error) {
-        alert(error.message)
+        alert(error.message);
       } else {
-        alert("An unknown error occurred.")
+        alert("An unknown error occurred.");
       }
     }
   }

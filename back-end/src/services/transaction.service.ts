@@ -149,52 +149,71 @@ interface GetStatementArgs {
   startDate: string;
   endDate: string;
   type?: 'credit' | 'debit';
+  page: number;
+  limit: number;
 }
 
-export async function getStatement({ accountId, userId, startDate, endDate, type }: GetStatementArgs) {
-    // First, verify the user owns the account
+export async function getStatement({ accountId, userId, startDate, endDate, type, page, limit }: GetStatementArgs) {
     const accountCheck = await pool.query('SELECT id, balance FROM accounts WHERE id = $1 AND user_id = $2', [accountId, userId]);
     if (accountCheck.rows.length === 0) {
         throw new Error('Access to account denied.');
     }
     const account = accountCheck.rows[0];
 
-    // To calculate the initial balance at the start of `startDate`,
-    // we take the current balance and reverse all transactions that happened after `startDate`.
+    // Build the count query
+    let countQuery = 'SELECT COUNT(*) FROM transactions WHERE account_id = $1 AND created_at >= $2 AND created_at < $3';
+    const countQueryParams: any[] = [accountId, startDate, endDate];
+    if (type) {
+        countQuery += ' AND type = $4';
+        countQueryParams.push(type);
+    }
+    const totalTransactionsResult = await pool.query(countQuery, countQueryParams);
+    const totalTransactions = parseInt(totalTransactionsResult.rows[0].count, 10);
+    const totalPages = Math.ceil(totalTransactions / limit);
+
+    // To calculate the initial balance for the current page, we need to consider all transactions before this page
+    const offset = (page - 1) * limit;
+    const transactionsBeforePageResult = await pool.query(
+        `SELECT type, amount FROM transactions WHERE account_id = $1 AND created_at >= $2 AND created_at < $3 ORDER BY created_at ASC`,
+        [accountId, startDate, endDate]
+    );
+
+    let initialBalance = parseFloat(account.balance);
     const transactionsAfterStartResult = await pool.query(
         `SELECT type, amount FROM transactions WHERE account_id = $1 AND created_at >= $2`,
         [accountId, startDate]
     );
-
-    let initialBalance = parseFloat(account.balance);
     for (const t of transactionsAfterStartResult.rows) {
-        if (t.type === 'credit') {
-            initialBalance -= parseFloat(t.amount);
-        } else {
-            initialBalance += parseFloat(t.amount);
-        }
+        if (t.type === 'credit') initialBalance -= parseFloat(t.amount);
+        else initialBalance += parseFloat(t.amount);
     }
 
-    // Build the query to get transactions for the period
+    let balanceAtPageStart = initialBalance;
+    for (let i = 0; i < offset && i < transactionsBeforePageResult.rows.length; i++) {
+        const t = transactionsBeforePageResult.rows[i];
+        if (t.type === 'credit') balanceAtPageStart += parseFloat(t.amount);
+        else balanceAtPageStart -= parseFloat(t.amount);
+    }
+
+    // Build the query to get transactions for the period with pagination
     let query = 'SELECT * FROM transactions WHERE account_id = $1 AND created_at >= $2 AND created_at < $3';
     const queryParams: any[] = [accountId, startDate, endDate];
     if (type) {
         query += ' AND type = $4';
         queryParams.push(type);
     }
-    query += ' ORDER BY created_at ASC';
+    query += ' ORDER BY created_at ASC LIMIT $' + (queryParams.length + 1) + ' OFFSET $' + (queryParams.length + 2);
+    queryParams.push(limit, offset);
 
     const transactionsResult = await pool.query(query, queryParams);
     const transactions = transactionsResult.rows;
 
-    // Group transactions by day
     const dailyStatements = new Map<string, { date: string, transactions: any[], initial_balance: number, final_balance: number }>();
-    let runningBalance = initialBalance;
+    let runningBalance = balanceAtPageStart;
 
     for (const t of transactions) {
         if(t.created_at) {
             const date = new Date(t.created_at).toISOString().split('T')[0] as string;
-
             if (!dailyStatements.has(date)) {
                 dailyStatements.set(date, {
                     date,
@@ -203,21 +222,19 @@ export async function getStatement({ accountId, userId, startDate, endDate, type
                     final_balance: runningBalance
                 });
             }
-
             const dayStatement = dailyStatements.get(date)!;
-
             dayStatement.transactions.push(t);
-
-            if (t.type === 'credit') {
-                runningBalance += parseFloat(t.amount);
-            } else {
-                runningBalance -= parseFloat(t.amount);
-            }
+            if (t.type === 'credit') runningBalance += parseFloat(t.amount);
+            else runningBalance -= parseFloat(t.amount);
             dayStatement.final_balance = runningBalance;
         }
     }
 
-    return Array.from(dailyStatements.values());
+    return {
+        statement: Array.from(dailyStatements.values()),
+        totalPages,
+        currentPage: page,
+    };
 }
 
 export async function getRecentTransactionsByUserId(userId: string, limit: number = 5) {
