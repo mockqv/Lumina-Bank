@@ -13,13 +13,31 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Shield, ArrowLeft, CheckCircle } from "lucide-react"
 import { registerSchema, type RegisterData } from "@/services/authService"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/AuthContext"
+
+const formatCPF = (cpf: string) => {
+  return cpf
+    .replace(/\D/g, "")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+}
+
+const formatCNPJ = (cnpj: string) => {
+  return cnpj
+    .replace(/\D/g, "")
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2")
+}
 
 export default function RegisterPage() {
   const router = useRouter()
   const { register: registerUser } = useAuth()
   const [error, setError] = useState("")
+  const [formattedCpf, setFormattedCpf] = useState("")
 
   const {
     register,
@@ -32,6 +50,15 @@ export default function RegisterPage() {
   })
 
   const cpfValue = watch("cpf")
+
+  useEffect(() => {
+    if (cpfValue) {
+      const formatted = cpfValue.length <= 11 ? formatCPF(cpfValue) : formatCNPJ(cpfValue)
+      setFormattedCpf(formatted)
+    } else {
+      setFormattedCpf("")
+    }
+  }, [cpfValue])
 
   const onSubmit = async (data: RegisterData) => {
     try {
@@ -116,7 +143,7 @@ export default function RegisterPage() {
                   {...register("cpf", {
                     onChange: handleCPFChange,
                   })}
-                  value={cpfValue ? (cpfValue.length <= 11 ? formatCPF(cpfValue) : formatCNPJ(cpfValue)) : ""}
+                  value={formattedCpf}
                   maxLength={18}
                   className="h-11"
                 />

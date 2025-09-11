@@ -12,9 +12,9 @@ export interface TransferKeyDetails {
     recipient_id: string;
 }
 
-export async function createTransferKey(amount: number): Promise<TransferKey> {
+export async function createTransferKey(data: { amount: number, expires_in: string }): Promise<TransferKey> {
     try {
-        const response = await api.post('/transfer-keys', { amount });
+        const response = await api.post('/transfer-keys', data);
         return response.data;
     } catch (error) {
         if (isAxiosError(error) && error.response) {

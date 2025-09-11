@@ -70,3 +70,21 @@ export const getPrimaryPixKeyByUserId = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Error fetching primary PIX key', error });
     }
 }
+
+export const deletePixKey = async (req: Request, res: Response) => {
+  try {
+    const user_id = req.user.id;
+    const { key_id } = req.params;
+    if (!key_id) {
+      return res.status(400).json({ message: 'PIX key ID is required' });
+    }
+    const success = await pixService.deletePixKey(key_id, user_id);
+    if (success) {
+      res.status(204).send();
+    } else {
+      res.status(404).json({ message: 'PIX key not found or user not authorized' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting PIX key', error });
+  }
+};

@@ -10,11 +10,11 @@ export async function createTransferKey(req: AuthRequest, res: Response) {
         if (!req.user) {
             return res.status(401).json({ message: 'Not authorized' });
         }
-        const { amount } = req.body;
+        const { amount, expires_in } = req.body;
         if (!amount || typeof amount !== 'number' || amount <= 0) {
             return res.status(400).json({ message: 'Invalid amount' });
         }
-        const key = await transferKeyService.createTransferKey(req.user.id, amount);
+        const key = await transferKeyService.createTransferKey(req.user.id, amount, expires_in);
         res.status(201).json(key);
     } catch (error) {
         if (error instanceof Error) {

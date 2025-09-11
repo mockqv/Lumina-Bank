@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Shield, Zap, Smartphone, ArrowRight, CheckCircle, Star } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function LandingPage() {
   return (
@@ -31,6 +32,7 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center space-x-3">
+            <ThemeToggle />
             <Link href="/login">
               <Button variant="ghost" className="text-foreground">
                 Entrar
