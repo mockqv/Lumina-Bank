@@ -1,6 +1,7 @@
 import api from './api';
 import { z } from 'zod';
 import { isAxiosError } from 'axios';
+import { cpf as cpfValidator, cnpj as cnpjValidator } from 'cpf-cnpj-validator';
 
 // Zod schema for login form validation
 export const loginSchema = z.object({
@@ -13,7 +14,11 @@ export type LoginData = z.infer<typeof loginSchema>;
 export const registerSchema = z.object({
     full_name: z.string().min(3, { message: "O nome completo é obrigatório." }),
     email: z.string().email({ message: "Por favor, insira um email válido." }),
-    cpf: z.string().length(11, { message: "O CPF deve ter 11 dígitos." }),
+    cpf: z.string().regex(/^[0-9]+$/, { message: "Apenas números são permitidos." }).refine(value => {
+        return (value.length === 11 && cpfValidator.isValid(value)) || (value.length === 14 && cnpjValidator.isValid(value));
+    }, {
+        message: "CPF ou CNPJ inválido."
+    }),
     phone: z.string().min(10, { message: "O telefone deve ter pelo menos 10 dígitos." }),
     password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
 });

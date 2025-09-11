@@ -3,6 +3,7 @@ import { SignJWT } from 'jose';
 import pool from '@/config/database.js';
 import { type NewUser, type LoginUser } from '@/models/user.model.js';
 import { encrypt } from './crypto.service.js';
+import { cpf as cpfValidator, cnpj as cnpjValidator } from 'cpf-cnpj-validator';
 
 /**
  * Registers a new user in the database.
@@ -12,6 +13,13 @@ import { encrypt } from './crypto.service.js';
  */
 export async function register(user: NewUser) {
   const { full_name, email, password, cpf, phone } = user;
+
+  // Validate CPF/CNPJ
+  const cleanedCpf = cpf.replace(/\D/g, '');
+  if (!((cleanedCpf.length === 11 && cpfValidator.isValid(cleanedCpf)) || (cleanedCpf.length === 14 && cnpjValidator.isValid(cleanedCpf)))) {
+    throw new Error('Invalid CPF or CNPJ.');
+  }
+
 
   const client = await pool.connect();
   try {
