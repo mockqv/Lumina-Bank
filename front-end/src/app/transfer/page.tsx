@@ -102,6 +102,20 @@ function TransferComponent() {
     fetchBalance();
   }, [transferKey, setValue])
 
+  const watchedPixKey = watch("pixKey")
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (watchedPixKey && !transferKey && !recipient) {
+        handleVerifyKey(watchedPixKey)
+      }
+    }, 500) // 500ms debounce delay
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [watchedPixKey, transferKey])
+
 
   const watchedAmount = watch("amount")
 
@@ -122,21 +136,21 @@ function TransferComponent() {
     return key
   }
 
-  const handleVerifyKey = async () => {
-    const pixKey = getValues("pixKey")
-    if (!pixKey) {
-      setRecipientError("Please enter a PIX key.")
-      return
-    }
+  const handleVerifyKey = async (key: string) => {
+    if (!key) return;
     setLoadingRecipient(true)
     setRecipientError("")
     setRecipient(null)
     try {
-      const details = await getPixKeyDetails(pixKey)
+      const details = await getPixKeyDetails(key)
       setRecipient(details)
     } catch (err) {
       if (err instanceof Error) {
-        setRecipientError(err.message)
+        if (err.message.includes("404")) {
+          setRecipientError("Chave PIX não encontrada.")
+        } else {
+          setRecipientError(err.message)
+        }
       } else {
         setRecipientError("An unexpected error occurred.")
       }
@@ -362,17 +376,15 @@ function TransferComponent() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="pixKey">Chave PIX do Destinatário</Label>
-                <div className="flex items-center space-x-2">
+                <div className="relative">
                   <Input
                     id="pixKey"
                     placeholder="CPF, CNPJ, email, telefone ou chave aleatória"
                     {...register("pixKey")}
-                    className="h-11 flex-1"
-                    disabled={!!transferKey || loadingRecipient || !!recipient}
+                    className="h-11"
+                    disabled={!!transferKey || !!recipient}
                   />
-                  <Button type="button" onClick={handleVerifyKey} disabled={loadingRecipient || !!transferKey || !!recipient}>
-                    {loadingRecipient ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verificar"}
-                  </Button>
+                  {loadingRecipient && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
                 </div>
                 {errors.pixKey && <p className="text-sm text-destructive">{errors.pixKey.message}</p>}
                 {recipientError && <p className="text-sm text-destructive">{recipientError}</p>}

@@ -35,15 +35,24 @@ function calculateExpiresAt(expiresIn: string): Date {
 }
 
 export async function createTransferKey(userId: string, amount: number, expiresIn: string = '1d') {
-    const key = randomBytes(16).toString('hex');
-    const expires_at = expiresIn === 'permanent' ? new Date('9999-12-31T23:59:59Z') : calculateExpiresAt(expiresIn);
+    try {
+        const key = randomBytes(16).toString('hex');
+        const expires_at = expiresIn === 'permanent' ? new Date('9999-12-31T23:59:59Z') : calculateExpiresAt(expiresIn);
 
-    const result = await pool.query(
-        'INSERT INTO transfer_keys (user_id, amount, key, expires_at) VALUES ($1, $2, $3, $4) RETURNING key',
-        [userId, amount, key, expires_at]
-    );
+        const result = await pool.query(
+            'INSERT INTO transfer_keys (user_id, amount, key, expires_at) VALUES ($1, $2, $3, $4) RETURNING key',
+            [userId, amount, key, expires_at]
+        );
 
-    return result.rows[0];
+        if (result.rows.length === 0) {
+            throw new Error("Database did not return the new key after insertion.");
+        }
+        return result.rows[0];
+    } catch (dbError) {
+        // Log the detailed database error for debugging, but throw a generic message to the user.
+        console.error("Database error in createTransferKey:", dbError);
+        throw new Error("Could not create transfer key due to a database error.");
+    }
 }
 
 export async function getTransferKey(key: string) {

@@ -120,7 +120,10 @@ export async function createPixTransfer({ senderUserId, amount, pixKey, descript
         // 4. Debit from sender
         const senderNewBalance = currentBalance - amount;
         const debitDescription = `Transfer to ${recipientAccount.account_number}${description ? `: ${description}` : ''}`;
-        await client.query('UPDATE accounts SET balance = $1 WHERE id = $2', [senderNewBalance, senderAccount.id]);
+        const debitUpdate = await client.query('UPDATE accounts SET balance = $1 WHERE id = $2', [senderNewBalance, senderAccount.id]);
+        if (debitUpdate.rowCount === 0) {
+            throw new Error('Failed to debit sender account.');
+        }
         await client.query(
             'INSERT INTO transactions (account_id, type, amount, description) VALUES ($1, $2, $3, $4)',
             [senderAccount.id, 'debit', amount, debitDescription]
@@ -134,11 +137,17 @@ export async function createPixTransfer({ senderUserId, amount, pixKey, descript
         const recipientCurrentBalance = parseFloat(recipientAccountResult.rows[0].balance);
         const recipientNewBalance = recipientCurrentBalance + amount;
         const creditDescription = `Transfer from ${senderAccount.account_number}${description ? `: ${description}` : ''}`;
-        await client.query('UPDATE accounts SET balance = $1 WHERE id = $2', [recipientNewBalance, recipientAccount.id]);
+        const creditUpdate = await client.query('UPDATE accounts SET balance = $1 WHERE id = $2', [recipientNewBalance, recipientAccount.id]);
+        if (creditUpdate.rowCount === 0) {
+            throw new Error('Failed to credit recipient account.');
+        }
         const newTransactionResult = await client.query(
             'INSERT INTO transactions (account_id, type, amount, description) VALUES ($1, $2, $3, $4) RETURNING *',
             [recipientAccount.id, 'credit', amount, creditDescription]
         );
+        if (newTransactionResult.rows.length === 0) {
+            throw new Error('Failed to create recipient transaction record.');
+        }
 
         await client.query('COMMIT');
         return newTransactionResult.rows[0];
