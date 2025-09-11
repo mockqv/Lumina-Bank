@@ -36,7 +36,7 @@ export default function ReceivePage() {
     try {
       setError("")
       setGeneratedKey("")
-      const result = await createTransferKey(data.amount)
+      const result = await createTransferKey({ amount: data.amount })
       setGeneratedKey(result.key)
     } catch (err) {
       if (err instanceof Error) {

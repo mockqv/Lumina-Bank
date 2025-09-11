@@ -29,6 +29,10 @@ const pixTransferSchema = z.object({
 
 type PixTransferData = z.infer<typeof pixTransferSchema>
 
+import { getPixKeyDetails } from "@/services/pixService"
+import { getAccountBalance } from "@/services/accountService"
+import { Eye, EyeOff } from "lucide-react"
+
 function TransferComponent() {
   const searchParams = useSearchParams()
   const transferKey = searchParams.get("key")
@@ -39,6 +43,12 @@ function TransferComponent() {
   const [transferData, setTransferData] = useState<PixTransferData | null>(null)
   const [keyDetails, setKeyDetails] = useState<any>(null)
   const [loadingKey, setLoadingKey] = useState(true)
+  const [recipient, setRecipient] = useState<{ recipient_name: string } | null>(null)
+  const [loadingRecipient, setLoadingRecipient] = useState(false)
+  const [recipientError, setRecipientError] = useState("")
+  const [balance, setBalance] = useState<number | null>(null)
+  const [showBalance, setShowBalance] = useState(false)
+
 
   const {
     register,
@@ -47,6 +57,7 @@ function TransferComponent() {
     reset,
     watch,
     setValue,
+    getValues,
   } = useForm<PixTransferData>({
     resolver: zodResolver(pixTransferSchema),
   })
@@ -79,6 +90,16 @@ function TransferComponent() {
       }
     }
     fetchKeyDetails()
+
+    const fetchBalance = async () => {
+        try {
+            const data = await getAccountBalance();
+            setBalance(parseFloat(data.balance));
+        } catch (err) {
+            console.error("Failed to fetch balance", err);
+        }
+    }
+    fetchBalance();
   }, [transferKey, setValue])
 
 
@@ -99,6 +120,29 @@ function TransferComponent() {
       return formatCNPJ(cleanKey)
     }
     return key
+  }
+
+  const handleVerifyKey = async () => {
+    const pixKey = getValues("pixKey")
+    if (!pixKey) {
+      setRecipientError("Please enter a PIX key.")
+      return
+    }
+    setLoadingRecipient(true)
+    setRecipientError("")
+    setRecipient(null)
+    try {
+      const details = await getPixKeyDetails(pixKey)
+      setRecipient(details)
+    } catch (err) {
+      if (err instanceof Error) {
+        setRecipientError(err.message)
+      } else {
+        setRecipientError("An unexpected error occurred.")
+      }
+    } finally {
+      setLoadingRecipient(false)
+    }
   }
 
   const onSubmit = async (data: PixTransferData) => {
@@ -275,11 +319,28 @@ function TransferComponent() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Send className="h-5 w-5" />
-              <span>Nova Transferência</span>
-            </CardTitle>
-            <CardDescription>Preencha os dados do destinatário e o valor a ser transferido</CardDescription>
+            <div className="flex justify-between items-start">
+                <div>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Send className="h-5 w-5" />
+                      <span>Nova Transferência</span>
+                    </CardTitle>
+                    <CardDescription>Preencha os dados do destinatário e o valor a ser transferido</CardDescription>
+                </div>
+                {balance !== null && (
+                    <div className="text-right">
+                        <div className="text-sm text-muted-foreground">Seu Saldo</div>
+                        <div className="flex items-center space-x-2">
+                            <span className="text-lg font-bold">
+                                {showBalance ? formatCurrency(balance) : "••••••"}
+                            </span>
+                            <Button variant="ghost" size="icon" onClick={() => setShowBalance(!showBalance)}>
+                                {showBalance ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
           </CardHeader>
           <CardContent>
             {error && (
@@ -291,57 +352,71 @@ function TransferComponent() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="pixKey">Chave PIX do Destinatário</Label>
-                <Input
-                  id="pixKey"
-                  placeholder="CPF, CNPJ, email, telefone ou chave aleatória"
-                  {...register("pixKey")}
-                  className="h-11"
-                  disabled={!!transferKey}
-                />
-                {errors.pixKey && <p className="text-sm text-destructive">{errors.pixKey.message}</p>}
-                {keyDetails ? (
-                    <p className="text-xs text-muted-foreground">Destinatário: {keyDetails.recipient_name}</p>
-                ) : (
-                    <p className="text-xs text-muted-foreground">
-                    Digite a chave PIX do destinatário. Pode ser CPF, CNPJ, email, telefone ou chave aleatória.
-                    </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="amount">Valor</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">R$</span>
+                <div className="flex items-center space-x-2">
                   <Input
-                    id="amount"
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    max="50000"
-                    placeholder="0,00"
-                    {...register("amount")}
-                    className="h-11 pl-10"
-                    disabled={!!transferKey}
+                    id="pixKey"
+                    placeholder="CPF, CNPJ, email, telefone ou chave aleatória"
+                    {...register("pixKey")}
+                    className="h-11 flex-1"
+                    disabled={!!transferKey || loadingRecipient || !!recipient}
                   />
+                  <Button type="button" onClick={handleVerifyKey} disabled={loadingRecipient || !!transferKey || !!recipient}>
+                    {loadingRecipient ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verificar"}
+                  </Button>
                 </div>
-                {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
-                {watchedAmount && (
-                  <p className="text-sm text-muted-foreground">Valor: {formatCurrency(Number(watchedAmount) || 0)}</p>
+                {errors.pixKey && <p className="text-sm text-destructive">{errors.pixKey.message}</p>}
+                {recipientError && <p className="text-sm text-destructive">{recipientError}</p>}
+                {recipient && (
+                    <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                        <span className="font-medium">Destinatário:</span> {recipient.recipient_name}
+                    </div>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição (Opcional)</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Adicione uma descrição para a transferência"
-                  {...register("description")}
-                  className="resize-none"
-                  rows={3}
-                />
-                {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
-                <p className="text-xs text-muted-foreground">Máximo 140 caracteres</p>
-              </div>
+              <fieldset disabled={!recipient && !transferKey} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Valor</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">R$</span>
+                    <Input
+                      id="amount"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      {...register("amount")}
+                      onInput={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const value = e.target.value;
+                        const sanitizedValue = value.replace(/[^0-9,.]/g, '').replace(',', '.');
+                        const parts = sanitizedValue.split('.');
+                        if (parts.length > 2) {
+                            e.target.value = `${parts[0]}.${parts.slice(1).join('')}`;
+                        } else {
+                            e.target.value = sanitizedValue;
+                        }
+                      }}
+                      className="h-11 pl-10"
+                      disabled={!!transferKey}
+                    />
+                  </div>
+                  {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
+                  {watchedAmount && (
+                    <p className="text-sm text-muted-foreground">Valor: {formatCurrency(Number(watchedAmount) || 0)}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Descrição (Opcional)</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Adicione uma descrição para a transferência"
+                    {...register("description")}
+                    className="resize-none"
+                    rows={3}
+                  />
+                  {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+                  <p className="text-xs text-muted-foreground">Máximo 140 caracteres</p>
+                </div>
+              </fieldset>
 
               <div className="bg-muted/50 p-4 rounded-lg">
                 <div className="flex items-center space-x-2 text-sm text-muted-foreground">

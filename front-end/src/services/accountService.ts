@@ -46,3 +46,15 @@ export async function getTransactionsByAccountId(accountId: string): Promise<Tra
         throw new Error('An unexpected error occurred. Please check your connection.');
     }
 }
+
+export async function getAccountBalance(): Promise<{ balance: string }> {
+    try {
+        const response = await api.get('/accounts/balance');
+        return response.data;
+    } catch (error) {
+        if (isAxiosError(error) && error.response) {
+            throw new Error(error.response.data.message || 'An error occurred while fetching balance.');
+        }
+        throw new Error('An unexpected error occurred. Please check your connection.');
+    }
+}

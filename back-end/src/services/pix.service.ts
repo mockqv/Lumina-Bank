@@ -36,6 +36,22 @@ export const createPixKey = async (user_id: string, data: CreatePixKeyData): Pro
   return result.rows[0];
 };
 
+export const getPixKeyDetails = async (key_value: string) => {
+    const pixKey = await findPixKeyByValue(key_value);
+    if (!pixKey) {
+        return null;
+    }
+
+    const userResult = await pool.query('SELECT full_name FROM users WHERE id = $1', [pixKey.user_id]);
+    if (userResult.rows.length === 0) {
+        return null;
+    }
+
+    return {
+        recipient_name: userResult.rows[0].full_name
+    };
+}
+
 export const deletePixKey = async (key_id: string, user_id: string): Promise<boolean> => {
   const result = await pool.query(
     'DELETE FROM pix_keys WHERE id = $1 AND user_id = $2',

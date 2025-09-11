@@ -24,3 +24,12 @@ export async function getAccountById(accountId: string, userId: string) {
     }
     return result.rows[0];
 }
+
+export async function getAccountBalanceByUserId(userId: string) {
+    const accounts = await getAccountsByUserId(userId);
+    if (accounts.length === 0) {
+        throw new Error('No account found for this user.');
+    }
+    // Assuming the first account is the primary one
+    return { balance: accounts[0].balance };
+}

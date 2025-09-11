@@ -9,6 +9,7 @@ const router = Router();
 router.use(protect);
 
 router.get('/', accountController.getAccounts);
+router.get('/balance', accountController.getAccountBalance);
 router.get('/:accountId/transactions', transactionController.getTransactions);
 
 export default router;

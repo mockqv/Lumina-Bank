@@ -88,3 +88,20 @@ export const deletePixKey = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error deleting PIX key', error });
   }
 };
+
+export const getPixKeyDetails = async (req: Request, res: Response) => {
+    try {
+        const { key } = req.params;
+        if (!key) {
+            return res.status(400).json({ message: 'PIX key is required' });
+        }
+        const details = await pixService.getPixKeyDetails(key);
+        if (details) {
+            res.status(200).json(details);
+        } else {
+            res.status(404).json({ message: 'PIX key not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching PIX key details', error });
+    }
+}
