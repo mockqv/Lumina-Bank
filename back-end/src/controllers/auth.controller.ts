@@ -14,6 +14,7 @@ export async function register(req: Request, res: Response) {
       res.status(500).json({ message: 'An unexpected error occurred' });
     }
   }
+}
 
 export async function forgotPassword(req: Request, res: Response) {
     const { email } = req.body;
@@ -48,7 +49,7 @@ export async function resetPassword(req: Request, res: Response) {
         }
     }
 }
-}
+
 
 export async function login(req: Request, res: Response) {
   try {

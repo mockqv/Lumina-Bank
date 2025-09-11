@@ -28,7 +28,7 @@ export async function createTransferKey(req: AuthRequest, res: Response) {
 export async function getTransferKey(req: Request, res: Response) {
     try {
         const { key } = req.params;
-        const transferKey = await transferKeyService.getTransferKey(key);
+        const transferKey = await transferKeyService.getTransferKey(key!);
         if (!transferKey) {
             return res.status(404).json({ message: 'Transfer key not found, expired, or already used.' });
         }

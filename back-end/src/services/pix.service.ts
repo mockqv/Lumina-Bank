@@ -39,11 +39,11 @@ export const createPixKey = async (user_id: string, data: CreatePixKeyData): Pro
 export const getPrimaryPixKeyByUserId = async (user_id: string): Promise<PixKey | null> => {
     let result = await pool.query<PixKey>('SELECT * FROM pix_keys WHERE user_id = $1 AND status = \'active\' AND key_type = \'cpf\'', [user_id]);
     if (result.rows.length > 0) {
-        return result.rows[0];
+        return result.rows[0]!;
     }
     result = await pool.query<PixKey>('SELECT * FROM pix_keys WHERE user_id = $1 AND status = \'active\' AND key_type = \'random\'', [user_id]);
     if (result.rows.length > 0) {
-        return result.rows[0];
+        return result.rows[0]!;
     }
     result = await pool.query<PixKey>('SELECT * FROM pix_keys WHERE user_id = $1 AND status = \'active\' LIMIT 1', [user_id]);
     return result.rows[0] || null;
