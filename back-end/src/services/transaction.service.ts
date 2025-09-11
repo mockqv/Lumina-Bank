@@ -109,6 +109,9 @@ export async function createPixTransfer({ senderUserId, amount, pixKey, descript
 
         // 3. Check sender's balance
         const accountResult = await client.query('SELECT balance FROM accounts WHERE id = $1 FOR UPDATE', [senderAccount.id]);
+        if (accountResult.rows.length === 0) {
+            throw new Error('Sender account not found within transaction.');
+        }
         const currentBalance = parseFloat(accountResult.rows[0].balance);
         if (currentBalance < amount) {
             throw new Error('Insufficient funds.');
@@ -125,6 +128,9 @@ export async function createPixTransfer({ senderUserId, amount, pixKey, descript
 
         // 5. Credit to recipient
         const recipientAccountResult = await client.query('SELECT balance FROM accounts WHERE id = $1 FOR UPDATE', [recipientAccount.id]);
+        if (recipientAccountResult.rows.length === 0) {
+            throw new Error('Recipient account not found within transaction.');
+        }
         const recipientCurrentBalance = parseFloat(recipientAccountResult.rows[0].balance);
         const recipientNewBalance = recipientCurrentBalance + amount;
         const creditDescription = `Transfer from ${senderAccount.account_number}${description ? `: ${description}` : ''}`;

@@ -36,6 +36,25 @@ export const createPixKey = async (user_id: string, data: CreatePixKeyData): Pro
   return result.rows[0];
 };
 
+const maskData = (data: string, type: 'cpf' | 'cnpj' | 'email' | 'phone' | 'random') => {
+    if (!data) return '';
+    // This is a simplified masking logic for demonstration
+    switch (type) {
+        case 'cpf':
+            return data.replace(/^(\d{3})\d{5}(\d{3})$/, '$1****$2');
+        case 'cnpj':
+            return data.replace(/^(\d{2})\d{8}(\d{4})$/, '$1********$2');
+        case 'email':
+            return data.replace(/(.{2}).*(@.*)/, '$1***$2');
+        case 'phone':
+            return data.replace(/^\d{2}(\d{5})\d{4}$/, '*****$1');
+        case 'random':
+            return `${data.slice(0, 4)}...${data.slice(-4)}`;
+        default:
+            return '****';
+    }
+};
+
 export const getPixKeyDetails = async (key_value: string) => {
     const pixKey = await findPixKeyByValue(key_value);
     if (!pixKey) {
@@ -48,7 +67,9 @@ export const getPixKeyDetails = async (key_value: string) => {
     }
 
     return {
-        recipient_name: userResult.rows[0].full_name
+        recipient_name: userResult.rows[0].full_name,
+        key_type: pixKey.key_type,
+        key_value_masked: maskData(pixKey.key_value, pixKey.key_type),
     };
 }
 

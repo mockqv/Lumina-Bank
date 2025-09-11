@@ -29,7 +29,7 @@ const pixTransferSchema = z.object({
 
 type PixTransferData = z.infer<typeof pixTransferSchema>
 
-import { getPixKeyDetails } from "@/services/pixService"
+import { getPixKeyDetails, type PixKeyDetails } from "@/services/pixService"
 import { getAccountBalance } from "@/services/accountService"
 import { Eye, EyeOff } from "lucide-react"
 
@@ -40,10 +40,10 @@ function TransferComponent() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [step, setStep] = useState<"form" | "confirm" | "success">("form")
-  const [transferData, setTransferData] = useState<PixTransferData | null>(null)
+  const [transferData, setTransferData] = useState<(PixTransferData & { recipient?: PixKeyDetails | null }) | null>(null)
   const [keyDetails, setKeyDetails] = useState<any>(null)
   const [loadingKey, setLoadingKey] = useState(true)
-  const [recipient, setRecipient] = useState<{ recipient_name: string } | null>(null)
+  const [recipient, setRecipient] = useState<PixKeyDetails | null>(null)
   const [loadingRecipient, setLoadingRecipient] = useState(false)
   const [recipientError, setRecipientError] = useState("")
   const [balance, setBalance] = useState<number | null>(null)
@@ -147,7 +147,7 @@ function TransferComponent() {
 
   const onSubmit = async (data: PixTransferData) => {
     setError("")
-    setTransferData(data)
+    setTransferData({ ...data, recipient })
     setStep("confirm")
   }
 
@@ -260,11 +260,21 @@ function TransferComponent() {
                   <span className="text-muted-foreground">Chave PIX do destinatário:</span>
                   <span className="font-medium">{formatPixKey(transferData?.pixKey || "")}</span>
                 </div>
-                {keyDetails && (
+                {transferData?.recipient && (
+                  <>
                     <div className="flex justify-between items-center py-3 border-b">
                         <span className="text-muted-foreground">Nome do destinatário:</span>
-                        <span className="font-medium">{keyDetails.recipient_name}</span>
+                        <span className="font-medium">{transferData.recipient.recipient_name}</span>
                     </div>
+                    <div className="flex justify-between items-center py-3 border-b">
+                        <span className="text-muted-foreground">Chave PIX:</span>
+                        <span className="font-medium">{transferData.recipient.key_value_masked}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-3 border-b">
+                        <span className="text-muted-foreground">Instituição:</span>
+                        <span className="font-medium">Lumina Bank</span>
+                    </div>
+                  </>
                 )}
                 <div className="flex justify-between items-center py-3 border-b">
                   <span className="text-muted-foreground">Valor:</span>
@@ -367,8 +377,19 @@ function TransferComponent() {
                 {errors.pixKey && <p className="text-sm text-destructive">{errors.pixKey.message}</p>}
                 {recipientError && <p className="text-sm text-destructive">{recipientError}</p>}
                 {recipient && (
-                    <div className="p-3 bg-muted/50 rounded-lg text-sm">
-                        <span className="font-medium">Destinatário:</span> {recipient.recipient_name}
+                    <div className="p-4 border rounded-lg bg-muted/50 space-y-2">
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Nome</span>
+                            <span className="font-medium">{recipient.recipient_name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Chave PIX</span>
+                            <span className="font-medium">{recipient.key_value_masked}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Instituição</span>
+                            <span className="font-medium">Lumina Bank</span>
+                        </div>
                     </div>
                 )}
               </div>
