@@ -12,7 +12,7 @@ import { registerSchema, type RegisterData, register as registerUser } from '@/s
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, setValue } = useForm<RegisterData>({
     resolver: zodResolver(registerSchema),
   });
 
@@ -54,8 +54,17 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cpf">CPF (apenas números)</Label>
-              <Input id="cpf" {...register("cpf")} />
+              <Label htmlFor="cpf">CPF/CNPJ (apenas números)</Label>
+              <Input
+                id="cpf"
+                {...register("cpf", {
+                  onChange: (e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setValue("cpf", value, { shouldValidate: true });
+                  }
+                })}
+                maxLength={14}
+              />
               {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
             </div>
 

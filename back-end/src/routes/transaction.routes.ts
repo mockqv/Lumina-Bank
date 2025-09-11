@@ -7,5 +7,7 @@ const router = Router();
 router.use(protect);
 
 router.post('/', transactionController.createTransaction);
+router.get('/:accountId/statement', transactionController.getStatement);
+router.post('/pix', transactionController.createPixTransfer);
 
 export default router;

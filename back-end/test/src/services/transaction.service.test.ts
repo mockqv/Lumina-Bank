@@ -4,6 +4,8 @@ import pool from '@/config/database.js';
 
 // Mock the entire pool module
 jest.mock('@/config/database.js');
+jest.mock('@/services/pix.service.js');
+jest.mock('@/services/account.service.js');
 
 const mockedPool = pool as jest.Mocked<typeof pool>;
 

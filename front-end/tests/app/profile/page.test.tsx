@@ -15,6 +15,10 @@ jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(),
 }));
 
+jest.mock('@/components/main-layout', () => ({
+  MainLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
 describe('Profile Page', () => {
   it('renders user information and a logout button', () => {
     // Arrange
@@ -32,8 +36,8 @@ describe('Profile Page', () => {
     render(<ProfilePage />);
 
     // Assert
-    expect(screen.getByText(/John Doe/i)).toBeInTheDocument();
-    expect(screen.getByText(/john.doe@example.com/i)).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/John Doe/i)).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/john.doe@example.com/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sair/i })).toBeInTheDocument();
   });
 

@@ -1,5 +1,7 @@
 import pool from '@/config/database.js';
 import { type transaction_type } from '@/models/transaction.model.js';
+import { findPixKeyByValue } from './pix.service.js';
+import { getAccountsByUserId } from './account.service.js';
 
 interface CreateTransactionArgs {
   accountId: string;
@@ -68,4 +70,146 @@ export async function getTransactionsByAccountId(accountId: string, userId: stri
         [accountId]
     );
     return result.rows;
+}
+
+export async function createPixTransfer({ senderUserId, amount, pixKey, description }: { senderUserId: string; amount: number; pixKey: string; description: string; }) {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. Find recipient's PIX key
+        const recipientPixKey = await findPixKeyByValue(pixKey);
+        if (!recipientPixKey) {
+            throw new Error('Recipient PIX key not found.');
+        }
+        const recipientUserId = recipientPixKey.user_id;
+
+        if(senderUserId === recipientUserId) {
+            throw new Error('Sender and receiver cannot be the same person.');
+        }
+
+        // 2. Get sender and recipient accounts
+        const senderAccounts = await getAccountsByUserId(senderUserId);
+        const recipientAccounts = await getAccountsByUserId(recipientUserId);
+
+        if (senderAccounts.length === 0) {
+            throw new Error('Sender account not found.');
+        }
+        if (recipientAccounts.length === 0) {
+            throw new Error('Recipient account not found.');
+        }
+        const senderAccount = senderAccounts[0];
+        const recipientAccount = recipientAccounts[0];
+
+        // 3. Check sender's balance
+        const accountResult = await client.query('SELECT balance FROM accounts WHERE id = $1 FOR UPDATE', [senderAccount.id]);
+        const currentBalance = parseFloat(accountResult.rows[0].balance);
+        if (currentBalance < amount) {
+            throw new Error('Insufficient funds.');
+        }
+
+        // 4. Debit from sender
+        const senderNewBalance = currentBalance - amount;
+        await client.query('UPDATE accounts SET balance = $1 WHERE id = $2', [senderNewBalance, senderAccount.id]);
+        await client.query(
+            'INSERT INTO transactions (account_id, type, amount, description) VALUES ($1, $2, $3, $4)',
+            [senderAccount.id, 'debit', amount, `Transfer to ${recipientAccount.account_number}: ${description}`]
+        );
+
+        // 5. Credit to recipient
+        const recipientAccountResult = await client.query('SELECT balance FROM accounts WHERE id = $1 FOR UPDATE', [recipientAccount.id]);
+        const recipientCurrentBalance = parseFloat(recipientAccountResult.rows[0].balance);
+        const recipientNewBalance = recipientCurrentBalance + amount;
+        await client.query('UPDATE accounts SET balance = $1 WHERE id = $2', [recipientNewBalance, recipientAccount.id]);
+        const newTransactionResult = await client.query(
+            'INSERT INTO transactions (account_id, type, amount, description) VALUES ($1, $2, $3, $4) RETURNING *',
+            [recipientAccount.id, 'credit', amount, `Transfer from ${senderAccount.account_number}: ${description}`]
+        );
+
+        await client.query('COMMIT');
+        return newTransactionResult.rows[0];
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
+
+interface GetStatementArgs {
+  accountId: string;
+  userId: string;
+  startDate: string;
+  endDate: string;
+  type?: 'credit' | 'debit';
+}
+
+export async function getStatement({ accountId, userId, startDate, endDate, type }: GetStatementArgs) {
+    // First, verify the user owns the account
+    const accountCheck = await pool.query('SELECT id, balance FROM accounts WHERE id = $1 AND user_id = $2', [accountId, userId]);
+    if (accountCheck.rows.length === 0) {
+        throw new Error('Access to account denied.');
+    }
+    const account = accountCheck.rows[0];
+
+    // To calculate the initial balance at the start of `startDate`,
+    // we take the current balance and reverse all transactions that happened after `startDate`.
+    const transactionsAfterStartResult = await pool.query(
+        `SELECT type, amount FROM transactions WHERE account_id = $1 AND created_at >= $2`,
+        [accountId, startDate]
+    );
+
+    let initialBalance = parseFloat(account.balance);
+    for (const t of transactionsAfterStartResult.rows) {
+        if (t.type === 'credit') {
+            initialBalance -= parseFloat(t.amount);
+        } else {
+            initialBalance += parseFloat(t.amount);
+        }
+    }
+
+    // Build the query to get transactions for the period
+    let query = 'SELECT * FROM transactions WHERE account_id = $1 AND created_at >= $2 AND created_at < $3';
+    const queryParams: any[] = [accountId, startDate, endDate];
+    if (type) {
+        query += ' AND type = $4';
+        queryParams.push(type);
+    }
+    query += ' ORDER BY created_at ASC';
+
+    const transactionsResult = await pool.query(query, queryParams);
+    const transactions = transactionsResult.rows;
+
+    // Group transactions by day
+    const dailyStatements = new Map<string, { date: string, transactions: any[], initial_balance: number, final_balance: number }>();
+    let runningBalance = initialBalance;
+
+    for (const t of transactions) {
+        if(t.created_at) {
+            const date = new Date(t.created_at).toISOString().split('T')[0] as string;
+
+            if (!dailyStatements.has(date)) {
+                dailyStatements.set(date, {
+                    date,
+                    transactions: [],
+                    initial_balance: runningBalance,
+                    final_balance: runningBalance
+                });
+            }
+
+            const dayStatement = dailyStatements.get(date)!;
+
+            dayStatement.transactions.push(t);
+
+            if (t.type === 'credit') {
+                runningBalance += parseFloat(t.amount);
+            } else {
+                runningBalance -= parseFloat(t.amount);
+            }
+            dayStatement.final_balance = runningBalance;
+        }
+    }
+
+    return Array.from(dailyStatements.values());
 }

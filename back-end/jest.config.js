@@ -3,7 +3,13 @@ export default {
   preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
   moduleNameMapper: {
-    '^@/(.*)\\.js$': '<rootDir>/src/$1',
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^(.*)\\.js$': '$1',
+  },
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', {
+      useESM: true,
+    }],
   },
   testMatch: ['**/test/**/*.test.ts'],
   verbose: true,
