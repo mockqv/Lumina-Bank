@@ -11,7 +11,7 @@ export async function protect(req: AuthRequest, res: Response, next: NextFunctio
   if (req.headers.cookie) {
     const cookies = req.headers.cookie.split(';').reduce((acc, cookie) => {
       const [key, value] = cookie.trim().split('=');
-      if (key) {
+      if (key && value) {
         acc[key] = value;
       }
       return acc;
