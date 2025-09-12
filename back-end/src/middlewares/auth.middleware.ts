@@ -11,7 +11,9 @@ export async function protect(req: AuthRequest, res: Response, next: NextFunctio
   if (req.headers.cookie) {
     const cookies = req.headers.cookie.split(';').reduce((acc, cookie) => {
       const [key, value] = cookie.trim().split('=');
-      acc[key] = value;
+      if (key) {
+        acc[key] = value;
+      }
       return acc;
     }, {} as Record<string, string>);
     token = cookies['token'];
