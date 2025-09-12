@@ -1,6 +1,7 @@
 import pool from '../config/database.js';
 import { PixKey, CreatePixKeyData, UpdatePixKeyStatusData } from '../models/pix.model.js';
 import { randomUUID } from 'crypto';
+import { decrypt } from './crypto.service.js';
 
 export const findPixKeyByValue = async (key_value: string): Promise<PixKey | null> => {
   const result = await pool.query<PixKey>('SELECT * FROM pix_keys WHERE key_value = $1 AND status = \'active\'', [key_value]);
@@ -24,7 +25,18 @@ export const createPixKey = async (user_id: string, data: CreatePixKeyData): Pro
     throw new Error('key_value is required for the given key_type');
   }
 
-  // TODO: Add validation to check if email, cpf or phone belongs to the user creating the key.
+  if (key_type === 'cpf' || key_type === 'cnpj') {
+    const userResult = await pool.query('SELECT cpf FROM users WHERE id = $1', [user_id]);
+    if (userResult.rows.length === 0) {
+        throw new Error("User not found.");
+    }
+    const encryptedUserCpf = userResult.rows[0].cpf;
+    const decryptedUserCpf = decrypt(encryptedUserCpf);
+
+    if (decryptedUserCpf !== final_key_value) {
+        throw new Error(`The provided ${key_type.toUpperCase()} does not match the account holder's document.`);
+    }
+  }
 
   const result = await pool.query<PixKey>(
     'INSERT INTO pix_keys (user_id, key_type, key_value) VALUES ($1, $2, $3) RETURNING *',
