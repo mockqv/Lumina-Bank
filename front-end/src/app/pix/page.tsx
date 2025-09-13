@@ -42,7 +42,7 @@ export default function PixPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
-  const [generatedKey, setGeneratedKey] = useState<{ key: string } | null>(null)
+  const [generatedKey, setGeneratedKey] = useState<{ key: string, amount: number } | null>(null)
   const {
     register,
     handleSubmit,
@@ -179,7 +179,7 @@ export default function PixPage() {
       setError("")
       setSuccess("")
       const newKey = await createTransferKey(data)
-      setGeneratedKey(newKey)
+      setGeneratedKey({ ...newKey, amount: data.amount })
       setSuccess("Cobrança gerada com sucesso!")
       resetCharge()
     } catch (error) {
@@ -191,6 +191,13 @@ export default function PixPage() {
     navigator.clipboard.writeText(text)
     setSuccess("Chave copiada para a área de transferência!")
     setTimeout(() => setSuccess(""), 3000)
+  }
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value)
   }
 
   return (
@@ -356,13 +363,20 @@ export default function PixPage() {
               </Button>
             </form>
             {generatedKey && (
-              <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm font-medium">QR Code gerado!</p>
-                <p className="text-xs text-muted-foreground">Chave: {generatedKey.key}</p>
-                <Button variant="outline" size="sm" className="mt-2" onClick={() => copyToClipboard(generatedKey.key)}>
-                  <Copy className="mr-2 h-3 w-3" />
-                  Copiar Chave
-                </Button>
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg space-y-2">
+                  <p className="text-sm font-medium text-green-800">Cobrança PIX Gerada!</p>
+                  <div className="flex items-center justify-between">
+                      <span className="text-sm text-green-700">Valor:</span>
+                      <span className="font-bold text-green-800">{formatCurrency(generatedKey.amount)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                      <span className="text-sm text-green-700">Chave:</span>
+                      <span className="font-mono text-xs text-green-800 truncate max-w-[150px]">{generatedKey.key}</span>
+                  </div>
+                  <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => copyToClipboard(generatedKey.key)}>
+                      <Copy className="mr-2 h-3 w-3" />
+                      Copiar Chave PIX
+                  </Button>
               </div>
             )}
           </CardContent>

@@ -25,7 +25,7 @@ const pixTransferSchema = z.object({
     .number({ invalid_type_error: "Valor deve ser um número" })
     .positive("O valor deve ser positivo")
     .max(50000, "Valor máximo de R$ 50.000,00 por transferência"),
-  description: z.string().max(140, "Descrição deve ter no máximo 140 caracteres").optional(),
+  description: z.string().min(1, "A descrição é obrigatória").max(140, "Descrição deve ter no máximo 140 caracteres"),
 })
 
 type PixTransferData = z.infer<typeof pixTransferSchema>
@@ -341,7 +341,7 @@ function TransferComponent() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Descrição (Opcional)</Label>
+                  <Label htmlFor="description">Descrição</Label>
                   <Textarea
                     id="description"
                     placeholder="Adicione uma descrição para a transferência"
