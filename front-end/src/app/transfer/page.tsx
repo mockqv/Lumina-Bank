@@ -18,6 +18,7 @@ import { getPrimaryPixKeyByUserId, getPixKeyDetails, type PixKeyDetails } from "
 import { createPixTransfer } from "@/services/transactionService"
 import { formatCPF, formatCNPJ } from "@/lib/validation"
 import { getAccountBalance } from "@/services/accountService"
+import { useAuth } from "@/contexts/AuthContext"
 
 const pixTransferSchema = z.object({
   pixKey: z.string().min(1, "A chave PIX é obrigatória"),
@@ -33,6 +34,7 @@ type PixTransferData = z.infer<typeof pixTransferSchema>
 function TransferComponent() {
   const searchParams = useSearchParams()
   const transferKey = searchParams.get("key")
+  const { user } = useAuth()
 
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -50,13 +52,12 @@ function TransferComponent() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting, isValid },
+    formState: { errors, isSubmitting },
     reset,
     watch,
     setValue,
   } = useForm<PixTransferData>({
     resolver: zodResolver(pixTransferSchema),
-    mode: "onChange",
   })
 
   const watchedPixKey = watch("pixKey")
@@ -69,6 +70,10 @@ function TransferComponent() {
     setRecipient(null)
     try {
       const details = await getPixKeyDetails(key)
+      if (details.user_id === user?.id) {
+        setRecipientError("Você não pode fazer uma transferência para si mesmo.")
+        return
+      }
       setRecipient(details)
     } catch (err) {
       if (err instanceof Error) {
@@ -362,7 +367,7 @@ function TransferComponent() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full h-11" disabled={isSubmitting || !isValid || (!recipient && !transferKey)}>
+              <Button type="submit" className="w-full h-11" disabled={isSubmitting || (!recipient && !transferKey)}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
