@@ -22,6 +22,7 @@ type ReceiveData = z.infer<typeof receiveSchema>
 export default function ReceivePage() {
   const [error, setError] = useState("")
   const [generatedKey, setGeneratedKey] = useState("")
+  const [generatedAmount, setGeneratedAmount] = useState<number | null>(null)
   const [isCopied, setIsCopied] = useState(false)
 
   const {
@@ -36,8 +37,10 @@ export default function ReceivePage() {
     try {
       setError("")
       setGeneratedKey("")
-      const result = await createTransferKey(data.amount)
+      setGeneratedAmount(null)
+      const result = await createTransferKey({ amount: data.amount })
       setGeneratedKey(result.key)
+      setGeneratedAmount(data.amount)
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message)
@@ -97,17 +100,27 @@ export default function ReceivePage() {
             )}
 
             {generatedKey && (
-              <div className="mt-6 p-4 border rounded-lg bg-muted/50">
-                <Label>Chave Gerada</Label>
-                <div className="flex items-center space-x-2 mt-2">
-                  <Input readOnly value={generatedKey} className="flex-1" />
-                  <Button variant="outline" size="icon" onClick={handleCopy}>
-                    {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  </Button>
+              <div className="mt-6 p-4 border rounded-lg bg-muted/50 space-y-4">
+                {generatedAmount && (
+                    <div>
+                        <Label>Valor da Cobrança</Label>
+                        <p className="text-2xl font-bold">
+                            {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(generatedAmount)}
+                        </p>
+                    </div>
+                )}
+                <div>
+                    <Label>Chave Gerada</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Input readOnly value={generatedKey} className="flex-1" />
+                      <Button variant="outline" size="icon" onClick={handleCopy}>
+                        {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Compartilhe esta chave com a pessoa que vai te pagar. A chave é válida por 24 horas.
+                    </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Compartilhe esta chave com a pessoa que vai te pagar. A chave é válida por 24 horas.
-                </p>
               </div>
             )}
           </CardContent>

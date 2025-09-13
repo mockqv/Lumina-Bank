@@ -58,7 +58,7 @@ export async function login(req: Request, res: Response) {
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 3600000, // 1 hour in milliseconds
     });
 
@@ -76,7 +76,7 @@ export function logout(req: Request, res: Response) {
     res.cookie('token', '', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
         expires: new Date(0),
     });
 

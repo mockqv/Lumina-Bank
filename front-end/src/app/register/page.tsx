@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useForm } from "react-hook-form"
+import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Shield, ArrowLeft, CheckCircle } from "lucide-react"
 import { registerSchema, type RegisterData } from "@/services/authService"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 
 const formatCPF = (cpf: string) => {
@@ -37,28 +37,16 @@ export default function RegisterPage() {
   const router = useRouter()
   const { register: registerUser } = useAuth()
   const [error, setError] = useState("")
-  const [formattedCpf, setFormattedCpf] = useState("")
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     setValue,
-    watch,
+    control,
   } = useForm<RegisterData>({
     resolver: zodResolver(registerSchema),
   })
-
-  const cpfValue = watch("cpf")
-
-  useEffect(() => {
-    if (cpfValue) {
-      const formatted = cpfValue.length <= 11 ? formatCPF(cpfValue) : formatCNPJ(cpfValue)
-      setFormattedCpf(formatted)
-    } else {
-      setFormattedCpf("")
-    }
-  }, [cpfValue])
 
   const onSubmit = async (data: RegisterData) => {
     try {
@@ -72,11 +60,6 @@ export default function RegisterPage() {
         setError("An unexpected error occurred.")
       }
     }
-  }
-
-  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, "")
-    setValue("cpf", value, { shouldValidate: true })
   }
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,15 +120,24 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="cpf">CPF/CNPJ</Label>
-                <Input
-                  id="cpf"
-                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                  {...register("cpf", {
-                    onChange: handleCPFChange,
-                  })}
-                  value={formattedCpf}
-                  maxLength={18}
-                  className="h-11"
+                <Controller
+                  name="cpf"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      id="cpf"
+                      placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        const unmasked = value.replace(/\D/g, "")
+                        field.onChange(unmasked)
+                      }}
+                      value={field.value ? (field.value.length <= 11 ? formatCPF(field.value) : formatCNPJ(field.value)) : ""}
+                      maxLength={18}
+                      className="h-11"
+                    />
+                  )}
                 />
                 {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
               </div>

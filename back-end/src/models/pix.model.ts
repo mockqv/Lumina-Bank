@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const PixKeyType = z.enum(['cpf', 'email', 'phone', 'random']);
+export const PixKeyType = z.enum(['cpf', 'cnpj', 'email', 'phone', 'random']);
 export const PixKeyStatus = z.enum(['active', 'inactive']);
 
 export const PixKeySchema = z.object({

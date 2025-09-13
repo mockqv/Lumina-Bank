@@ -6,7 +6,18 @@ interface AuthRequest extends Request {
 }
 
 export async function protect(req: AuthRequest, res: Response, next: NextFunction) {
-  const token = req.cookies.token;
+  let token;
+
+  if (req.headers.cookie) {
+    const cookies = req.headers.cookie.split(';').reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split('=');
+      if (key && value) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as Record<string, string>);
+    token = cookies['token'];
+  }
 
   if (!token) {
     return res.status(401).json({ message: 'Not authorized, no token' });

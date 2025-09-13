@@ -13,6 +13,7 @@ import { cpf as cpfValidator, cnpj as cnpjValidator } from 'cpf-cnpj-validator';
  */
 export async function register(user: NewUser) {
   const { full_name, email, password, cpf, phone } = user;
+  const lowerCaseEmail = email.toLowerCase();
 
   // Validate CPF/CNPJ
   const cleanedCpf = cpf.replace(/\D/g, '');
@@ -26,7 +27,7 @@ export async function register(user: NewUser) {
     await client.query('BEGIN');
 
     // Check if user already exists
-    const existingUser = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+    const existingUser = await client.query('SELECT * FROM users WHERE email = $1', [lowerCaseEmail]);
     if (existingUser.rows.length > 0) {
       throw new Error('Email already in use.');
     }
@@ -34,12 +35,12 @@ export async function register(user: NewUser) {
     // Hash password and encrypt CPF
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
-    const encryptedCpf = encrypt(cpf);
+    const encryptedCpf = encrypt(cleanedCpf);
 
     // Save user to database
     const newUserResult = await client.query(
       'INSERT INTO users (full_name, email, cpf, phone, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, email, created_at',
-      [full_name, email, encryptedCpf, phone, passwordHash]
+      [full_name, lowerCaseEmail, encryptedCpf, phone, passwordHash]
     );
 
     const newUser = newUserResult.rows[0];
@@ -70,8 +71,9 @@ export async function register(user: NewUser) {
  */
 export async function login(credentials: LoginUser) {
   const { email, password } = credentials;
+  const lowerCaseEmail = email.toLowerCase();
 
-  const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+  const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [lowerCaseEmail]);
   if (userResult.rows.length === 0) {
     throw new Error('Invalid credentials.');
   }

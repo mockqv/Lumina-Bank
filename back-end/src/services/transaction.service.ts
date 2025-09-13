@@ -109,6 +109,9 @@ export async function createPixTransfer({ senderUserId, amount, pixKey, descript
 
         // 3. Check sender's balance
         const accountResult = await client.query('SELECT balance FROM accounts WHERE id = $1 FOR UPDATE', [senderAccount.id]);
+        if (accountResult.rows.length === 0) {
+            throw new Error('Sender account not found within transaction.');
+        }
         const currentBalance = parseFloat(accountResult.rows[0].balance);
         if (currentBalance < amount) {
             throw new Error('Insufficient funds.');
@@ -116,21 +119,35 @@ export async function createPixTransfer({ senderUserId, amount, pixKey, descript
 
         // 4. Debit from sender
         const senderNewBalance = currentBalance - amount;
-        await client.query('UPDATE accounts SET balance = $1 WHERE id = $2', [senderNewBalance, senderAccount.id]);
+        const debitDescription = `Transfer to ${recipientAccount.account_number}${description ? `: ${description}` : ''}`;
+        const debitUpdate = await client.query('UPDATE accounts SET balance = $1 WHERE id = $2', [senderNewBalance, senderAccount.id]);
+        if (debitUpdate.rowCount === 0) {
+            throw new Error('Failed to debit sender account.');
+        }
         await client.query(
             'INSERT INTO transactions (account_id, type, amount, description) VALUES ($1, $2, $3, $4)',
-            [senderAccount.id, 'debit', amount, `Transfer to ${recipientAccount.account_number}: ${description}`]
+            [senderAccount.id, 'debit', amount, debitDescription]
         );
 
         // 5. Credit to recipient
         const recipientAccountResult = await client.query('SELECT balance FROM accounts WHERE id = $1 FOR UPDATE', [recipientAccount.id]);
+        if (recipientAccountResult.rows.length === 0) {
+            throw new Error('Recipient account not found within transaction.');
+        }
         const recipientCurrentBalance = parseFloat(recipientAccountResult.rows[0].balance);
         const recipientNewBalance = recipientCurrentBalance + amount;
-        await client.query('UPDATE accounts SET balance = $1 WHERE id = $2', [recipientNewBalance, recipientAccount.id]);
+        const creditDescription = `Transfer from ${senderAccount.account_number}${description ? `: ${description}` : ''}`;
+        const creditUpdate = await client.query('UPDATE accounts SET balance = $1 WHERE id = $2', [recipientNewBalance, recipientAccount.id]);
+        if (creditUpdate.rowCount === 0) {
+            throw new Error('Failed to credit recipient account.');
+        }
         const newTransactionResult = await client.query(
             'INSERT INTO transactions (account_id, type, amount, description) VALUES ($1, $2, $3, $4) RETURNING *',
-            [recipientAccount.id, 'credit', amount, `Transfer from ${senderAccount.account_number}: ${description}`]
+            [recipientAccount.id, 'credit', amount, creditDescription]
         );
+        if (newTransactionResult.rows.length === 0) {
+            throw new Error('Failed to create recipient transaction record.');
+        }
 
         await client.query('COMMIT');
         return newTransactionResult.rows[0];
