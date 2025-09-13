@@ -25,7 +25,7 @@ const pixTransferSchema = z.object({
     .number({ invalid_type_error: "Valor deve ser um número" })
     .positive("O valor deve ser positivo")
     .max(50000, "Valor máximo de R$ 50.000,00 por transferência"),
-  description: z.string().min(1, "A descrição é obrigatória").max(140, "Descrição deve ter no máximo 140 caracteres"),
+  description: z.string().max(140, "Descrição deve ter no máximo 140 caracteres").optional(),
 })
 
 type PixTransferData = z.infer<typeof pixTransferSchema>
@@ -50,12 +50,13 @@ function TransferComponent() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
     reset,
     watch,
     setValue,
   } = useForm<PixTransferData>({
     resolver: zodResolver(pixTransferSchema),
+    mode: "onChange",
   })
 
   const watchedPixKey = watch("pixKey")
@@ -341,7 +342,7 @@ function TransferComponent() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Descrição</Label>
+                  <Label htmlFor="description">Descrição (Opcional)</Label>
                   <Textarea
                     id="description"
                     placeholder="Adicione uma descrição para a transferência"
@@ -361,7 +362,7 @@ function TransferComponent() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full h-11" disabled={isSubmitting || (!recipient && !transferKey)}>
+              <Button type="submit" className="w-full h-11" disabled={isSubmitting || !isValid || (!recipient && !transferKey)}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

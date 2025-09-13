@@ -373,7 +373,7 @@ export default function PixPage() {
                       <span className="text-sm text-green-700">Chave:</span>
                       <span className="font-mono text-xs text-green-800 truncate max-w-[150px]">{generatedKey.key}</span>
                   </div>
-                  <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => copyToClipboard(generatedKey.key)}>
+                  <Button variant="secondary" size="sm" className="w-full mt-2 bg-green-100 text-green-800 hover:bg-green-200" onClick={() => copyToClipboard(generatedKey.key)}>
                       <Copy className="mr-2 h-3 w-3" />
                       Copiar Chave PIX
                   </Button>
