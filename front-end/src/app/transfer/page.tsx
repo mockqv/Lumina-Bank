@@ -45,6 +45,7 @@ function TransferComponent() {
   const [recipientError, setRecipientError] = useState("")
   const [balance, setBalance] = useState<number | null>(null)
   const [showBalance, setShowBalance] = useState(false)
+  const [isAmountLocked, setIsAmountLocked] = useState(false)
 
   const {
     register,
@@ -60,7 +61,7 @@ function TransferComponent() {
   const watchedPixKey = watch("pixKey")
   const watchedAmount = watch("amount")
 
-  const handleVerifyKey = async (key: string) => {
+  const handleVerifyPixKey = async (key: string) => {
     if (!key) return;
     setLoadingRecipient(true)
     setRecipientError("")
@@ -83,10 +84,45 @@ function TransferComponent() {
     }
   }
 
+  const handleVerifyTransferKey = async (key: string) => {
+    if (!key) return;
+    setLoadingRecipient(true);
+    setRecipientError("");
+    setRecipient(null);
+    setIsAmountLocked(false);
+    try {
+      const details = await getTransferKey(key);
+      if (details.is_used) {
+        setRecipientError("Esta chave de cobrança já foi utilizada.");
+        return;
+      }
+      setRecipient({
+        recipient_name: details.recipient_name,
+        key_type: 'transfer_key',
+        key_value_masked: `Cobrança de ${formatCurrency(Number(details.amount))}`
+      });
+      setValue("amount", Number(details.amount));
+      setIsAmountLocked(true);
+    } catch (err) {
+      if (err instanceof Error) {
+          setRecipientError("Chave de cobrança inválida ou expirada.");
+      } else {
+        setRecipientError("Ocorreu um erro ao verificar a chave de cobrança.");
+      }
+    } finally {
+      setLoadingRecipient(false);
+    }
+  };
+
   useEffect(() => {
     const handler = setTimeout(() => {
       if (watchedPixKey && !transferKey && !recipient) {
-        handleVerifyKey(watchedPixKey)
+        // Check if it's a 32-char hex string, which is our transfer key format
+        if (watchedPixKey.length === 32 && /^[0-9a-fA-F]+$/.test(watchedPixKey)) {
+          handleVerifyTransferKey(watchedPixKey);
+        } else {
+          handleVerifyPixKey(watchedPixKey);
+        }
       }
     }, 500) // 500ms debounce delay
 
@@ -146,6 +182,8 @@ function TransferComponent() {
     setRecipient(null)
     setRecipientError("")
     setValue("pixKey", "")
+    setValue("amount", "")
+    setIsAmountLocked(false)
   }
 
   const onSubmit = async (data: PixTransferData) => {
@@ -288,7 +326,7 @@ function TransferComponent() {
                         }
                       }}
                       className="h-11 pl-10"
-                      disabled={!!transferKey}
+                      disabled={!!transferKey || isAmountLocked}
                     />
                   </div>
                   {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
@@ -318,7 +356,7 @@ function TransferComponent() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full h-11" disabled={isSubmitting || !recipient && !transferKey}>
+              <Button type="submit" className="w-full h-11" disabled={isSubmitting || (!recipient && !transferKey)}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
