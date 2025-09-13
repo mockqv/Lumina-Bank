@@ -50,13 +50,12 @@ function TransferComponent() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting, isValid },
+    formState: { errors, isSubmitting },
     reset,
     watch,
     setValue,
   } = useForm<PixTransferData>({
     resolver: zodResolver(pixTransferSchema),
-    mode: 'onChange',
   })
 
   const watchedPixKey = watch("pixKey")
@@ -188,10 +187,8 @@ function TransferComponent() {
   }
 
   const onValidationErrors = (errors: any) => {
-    // This function is called when form validation fails.
-    // We can add more specific error handling here if needed.
-    // For now, the individual field error messages should be sufficient.
-    console.error("Validation Errors:", errors);
+    const errorMessages = Object.values(errors).map((error: any) => error.message).join(", ");
+    setError(`Validation failed: ${errorMessages}`);
   };
 
   const onSubmit = async (data: PixTransferData) => {
@@ -364,7 +361,7 @@ function TransferComponent() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full h-11" disabled={isSubmitting || !isValid || (!recipient && !transferKey)}>
+              <Button type="submit" className="w-full h-11" disabled={isSubmitting || (!recipient && !transferKey)}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
