@@ -50,12 +50,13 @@ function TransferComponent() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
     reset,
     watch,
     setValue,
   } = useForm<PixTransferData>({
     resolver: zodResolver(pixTransferSchema),
+    mode: 'onChange',
   })
 
   const watchedPixKey = watch("pixKey")
@@ -186,6 +187,13 @@ function TransferComponent() {
     setIsAmountLocked(false)
   }
 
+  const onValidationErrors = (errors: any) => {
+    // This function is called when form validation fails.
+    // We can add more specific error handling here if needed.
+    // For now, the individual field error messages should be sufficient.
+    console.error("Validation Errors:", errors);
+  };
+
   const onSubmit = async (data: PixTransferData) => {
     setError("")
     setTransferData({ ...data, recipient })
@@ -265,7 +273,7 @@ function TransferComponent() {
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit, onValidationErrors)} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="pixKey">Chave PIX do Destinatário</Label>
                 <div className="relative">
@@ -356,7 +364,7 @@ function TransferComponent() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full h-11" disabled={isSubmitting || (!recipient && !transferKey)}>
+              <Button type="submit" className="w-full h-11" disabled={isSubmitting || !isValid || (!recipient && !transferKey)}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

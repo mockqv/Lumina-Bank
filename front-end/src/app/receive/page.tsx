@@ -99,14 +99,16 @@ export default function ReceivePage() {
               </Alert>
             )}
 
-            {generatedKey && generatedAmount && (
+            {generatedKey && (
               <div className="mt-6 p-4 border rounded-lg bg-muted/50 space-y-4">
-                <div>
-                    <Label>Valor da Cobrança</Label>
-                    <p className="text-2xl font-bold">
-                        {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(generatedAmount)}
-                    </p>
-                </div>
+                {generatedAmount && (
+                    <div>
+                        <Label>Valor da Cobrança</Label>
+                        <p className="text-2xl font-bold">
+                            {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(generatedAmount)}
+                        </p>
+                    </div>
+                )}
                 <div>
                     <Label>Chave Gerada</Label>
                     <div className="flex items-center space-x-2 mt-1">
