@@ -232,6 +232,8 @@ function TransferComponent() {
     reset()
   }
 
+  const { onChange: onAmountChange, ...amountRegisterProps } = register("amount");
+
   // Render logic for loading, success, confirm, and form steps follows...
   // (Assuming the rest of the file is similar to what I've read before)
   // For brevity, I will only include the main form return block.
@@ -325,11 +327,12 @@ function TransferComponent() {
                       type="text"
                       inputMode="decimal"
                       placeholder="0,00"
-                      {...register("amount")}
-                      onInput={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      {...amountRegisterProps}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const value = e.target.value;
-                        const sanitizedValue = value.replace(/\./g, '').replace(',', '.');
-                        e.target.value = sanitizedValue.replace(/[^0-9.]/g, '');
+                        const sanitizedValue = value.replace(/\./g, "").replace(",", ".");
+                        e.target.value = sanitizedValue;
+                        onAmountChange(e);
                       }}
                       className="h-11 pl-10"
                       disabled={!!transferKey || isAmountLocked}
