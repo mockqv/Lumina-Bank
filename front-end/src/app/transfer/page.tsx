@@ -328,13 +328,8 @@ function TransferComponent() {
                       {...register("amount")}
                       onInput={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const value = e.target.value;
-                        const sanitizedValue = value.replace(/[^0-9,.]/g, '').replace(',', '.');
-                        const parts = sanitizedValue.split('.');
-                        if (parts.length > 2) {
-                            e.target.value = `${parts[0]}.${parts.slice(1).join('')}`;
-                        } else {
-                            e.target.value = sanitizedValue;
-                        }
+                        const sanitizedValue = value.replace(/\./g, '').replace(',', '.');
+                        e.target.value = sanitizedValue.replace(/[^0-9.]/g, '');
                       }}
                       className="h-11 pl-10"
                       disabled={!!transferKey || isAmountLocked}
