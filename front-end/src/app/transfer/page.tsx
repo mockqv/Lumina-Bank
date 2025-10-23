@@ -48,6 +48,7 @@ function TransferComponent() {
   const [balance, setBalance] = useState<number | null>(null)
   const [showBalance, setShowBalance] = useState(false)
   const [isAmountLocked, setIsAmountLocked] = useState(false)
+  const [isConfirming, setIsConfirming] = useState(false)
 
   const {
     register,
@@ -122,7 +123,7 @@ function TransferComponent() {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (watchedPixKey && !transferKey && !recipient) {
+      if (watchedPixKey && !recipient) {
         // Check if it's a 32-char hex string, which is our transfer key format
         if (watchedPixKey.length === 32 && /^[0-9a-fA-F]+$/.test(watchedPixKey)) {
           handleVerifyTransferKey(watchedPixKey);
@@ -135,7 +136,7 @@ function TransferComponent() {
     return () => {
       clearTimeout(handler)
     }
-  }, [watchedPixKey, transferKey, recipient])
+  }, [watchedPixKey, recipient])
 
   useEffect(() => {
     const fetchKeyDetails = async () => {
@@ -246,55 +247,56 @@ function TransferComponent() {
           <p className="text-muted-foreground">Envie dinheiro de forma rápida e segura</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-start">
+        {step === "form" && (
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-start">
                 <div>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Send className="h-5 w-5" />
-                      <span>Nova Transferência</span>
-                    </CardTitle>
-                    <CardDescription>Preencha os dados do destinatário e o valor a ser transferido</CardDescription>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Send className="h-5 w-5" />
+                    <span>Nova Transferência</span>
+                  </CardTitle>
+                  <CardDescription>Preencha os dados do destinatário e o valor a ser transferido</CardDescription>
                 </div>
                 {balance !== null && (
-                    <div className="text-right">
-                        <div className="text-sm text-muted-foreground">Seu Saldo</div>
-                        <div className="flex items-center space-x-2">
-                            <span className="text-lg font-bold">
-                                {showBalance ? formatCurrency(balance) : "••••••"}
-                            </span>
-                            <Button variant="ghost" size="icon" onClick={() => setShowBalance(!showBalance)}>
-                                {showBalance ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </Button>
-                        </div>
+                  <div className="text-right">
+                    <div className="text-sm text-muted-foreground">Seu Saldo</div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-lg font-bold">
+                        {showBalance ? formatCurrency(balance) : "••••••"}
+                      </span>
+                      <Button variant="ghost" size="icon" onClick={() => setShowBalance(!showBalance)}>
+                        {showBalance ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
                     </div>
+                  </div>
                 )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {error && (
-              <Alert variant="destructive" className="mb-6">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {error && (
+                <Alert variant="destructive" className="mb-6">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
-            <form onSubmit={handleSubmit(onSubmit, onValidationErrors)} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="pixKey">Chave PIX do Destinatário</Label>
-                <div className="relative">
-                  <Input
-                    id="pixKey"
-                    placeholder="CPF, CNPJ, email, telefone ou chave aleatória"
-                    {...register("pixKey")}
-                    className="h-11"
-                    disabled={!!transferKey || !!recipient}
-                    autoComplete="off"
-                  />
-                  {loadingRecipient && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
-                </div>
-                {errors.pixKey && <p className="text-sm text-destructive">{errors.pixKey.message}</p>}
-                {recipientError && <p className="text-sm text-destructive">{recipientError}</p>}
-                {recipient && (
+              <form onSubmit={handleSubmit(onSubmit, onValidationErrors)} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="pixKey">Chave PIX do Destinatário</Label>
+                  <div className="relative">
+                    <Input
+                      id="pixKey"
+                      placeholder="CPF, CNPJ, email, telefone ou chave aleatória"
+                      {...register("pixKey")}
+                      className="h-11"
+                      disabled={!!transferKey || !!recipient}
+                      autoComplete="off"
+                    />
+                    {loadingRecipient && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                  </div>
+                  {errors.pixKey && <p className="text-sm text-destructive">{errors.pixKey.message}</p>}
+                  {recipientError && <p className="text-sm text-destructive">{recipientError}</p>}
+                  {recipient && (
                     <div className="p-4 border rounded-lg bg-muted/50 space-y-2">
                         <div className="flex justify-between items-start">
                             <div className="space-y-1">
@@ -315,72 +317,147 @@ function TransferComponent() {
                         </div>
                     </div>
                 )}
-              </div>
+                </div>
 
-              <fieldset disabled={!recipient && !transferKey} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Valor</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">R$</span>
-                    <Input
-                      id="amount"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      {...amountRegisterProps}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                        const value = e.target.value;
-                        const sanitizedValue = value.replace(/\./g, "").replace(",", ".");
-                        e.target.value = sanitizedValue;
-                        onAmountChange(e);
-                      }}
-                      className="h-11 pl-10"
-                      disabled={!!transferKey || isAmountLocked}
-                    />
+                <fieldset disabled={!recipient && !transferKey} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Valor</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">R$</span>
+                      <Input
+                        id="amount"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        {...amountRegisterProps}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const value = e.target.value;
+                          const sanitizedValue = value.replace(/\./g, "").replace(",", ".");
+                          e.target.value = sanitizedValue;
+                          onAmountChange(e);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                          }
+                        }}
+                        className="h-11 pl-10"
+                        disabled={!!transferKey || isAmountLocked}
+                      />
+                    </div>
+                    {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
+                    {watchedAmount && (
+                      <p className="text-sm text-muted-foreground">Valor: {formatCurrency(Number(watchedAmount) || 0)}</p>
+                    )}
                   </div>
-                  {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
-                  {watchedAmount && (
-                    <p className="text-sm text-muted-foreground">Valor: {formatCurrency(Number(watchedAmount) || 0)}</p>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Descrição (Opcional)</Label>
+                    <Textarea
+                      id="description"
+                      placeholder="Adicione uma descrição para a transferência"
+                      {...register("description")}
+                      className="resize-none"
+                      rows={3}
+                    />
+                    {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+                    <p className="text-xs text-muted-foreground">Máximo 140 caracteres</p>
+                  </div>
+                </fieldset>
+
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <Shield className="h-4 w-4" />
+                    <span>Transferência segura e instantânea via PIX</span>
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full h-11" disabled={isSubmitting || (!recipient && !transferKey)}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Validando...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Continuar
+                    </>
                   )}
-                </div>
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Descrição (Opcional)</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Adicione uma descrição para a transferência"
-                    {...register("description")}
-                    className="resize-none"
-                    rows={3}
-                  />
-                  {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
-                  <p className="text-xs text-muted-foreground">Máximo 140 caracteres</p>
-                </div>
-              </fieldset>
-
-              <div className="bg-muted/50 p-4 rounded-lg">
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <Shield className="h-4 w-4" />
-                  <span>Transferência segura e instantânea via PIX</span>
-                </div>
+        {step === "confirm" && transferData && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Shield className="h-5 w-5" />
+                <span>Confirmar Transferência</span>
+              </CardTitle>
+              <CardDescription>Revise os detalhes da transferência antes de confirmar.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Destinatário:</p>
+                <p className="font-medium">{transferData.recipient?.recipient_name || "N/A"}</p>
               </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Chave PIX:</p>
+                <p className="font-medium">{transferData.pixKey}</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Valor:</p>
+                <p className="font-medium">{formatCurrency(transferData.amount)}</p>
+              </div>
+              {transferData.description && (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Descrição:</p>
+                  <p className="font-medium">{transferData.description}</p>
+                </div>
+              )}
+              <div className="flex gap-4 pt-4">
+                <Button onClick={() => setStep("form")} variant="outline" className="flex-1">
+                  Voltar
+                </Button>
+                <Button onClick={confirmTransfer} className="flex-1" disabled={isConfirming}>
+                  {isConfirming ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Confirmando...
+                    </>
+                  ) : (
+                    "Confirmar"
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-              <Button type="submit" className="w-full h-11" disabled={isSubmitting || (!recipient && !transferKey)}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Validando...
-                  </>
-                ) : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" />
-                    Continuar
-                  </>
-                )}
+        {step === "success" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-green-600">
+                <CheckCircle className="h-5 w-5" />
+                <span>Transferência Realizada!</span>
+              </CardTitle>
+              <CardDescription>{success}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={startNewTransfer} className="w-full">
+                Nova Transferência
               </Button>
-            </form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </MainLayout>
   )
