@@ -160,11 +160,3 @@ Lumina-Bank/
         ├── services/
         └── tests/
 ```
-
-## 🤝 Contribuições
-
-Contribuições são bem-vindas! Se você tem alguma ideia para melhorar o projeto, sinta-se à vontade para abrir uma *issue* ou enviar um *pull request*.
-
-## 📄 Licença
-
-Este projeto é distribuído sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
